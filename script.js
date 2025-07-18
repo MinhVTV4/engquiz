@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
