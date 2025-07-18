@@ -26,7 +26,7 @@ try {
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
     model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash-latest" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -1129,6 +1129,12 @@ async function showResult() {
     
     if (quizData.vocabMode === 'flashcard') {
         resultMessage.textContent = `Tuyệt vời! Bạn đã ôn tập xong ${total} thẻ.`;
+         // SỬA LỖI: Nút "Làm lại" nên quay về màn hình chi tiết bộ thẻ
+        playAgainButton.textContent = "Về lại bộ thẻ";
+        playAgainButton.onclick = async () => {
+            const deckDoc = await getDoc(doc(db, "users", auth.currentUser.uid, "notebookDecks", currentDeckId));
+            showDeckDetails(currentDeckId, deckDoc.data().name);
+        };
     } else {
         if (auth.currentUser) {
             await updateUserStreak(auth.currentUser.uid);
@@ -1821,6 +1827,7 @@ async function showDeckDetails(deckId, deckName) {
     deckWordList.innerHTML = '<div class="spinner mx-auto"></div>';
     quickLookupResult.innerHTML = '';
     quickLookupInput.value = '';
+    selectAllWordsCheckbox.checked = false; // SỬA LỖI: Reset checkbox
     
     try {
         const wordsRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
@@ -1828,35 +1835,94 @@ async function showDeckDetails(deckId, deckName) {
         const querySnapshot = await getDocs(q);
         
         const words = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+        
+        deckWordList.innerHTML = ''; // Xóa spinner trước khi thêm
         if (words.length === 0) {
             deckWordList.innerHTML = '<p class="text-center text-slate-500">Chưa có từ nào trong bộ thẻ này. Hãy dùng box "Tra cứu & Thêm" ở trên nhé!</p>';
-            return;
-        }
-
-        deckWordList.innerHTML = '';
-        words.sort((a, b) => (b.addedAt?.seconds || 0) - (a.addedAt?.seconds || 0))
-             .forEach(word => {
-                const wordEl = document.createElement('div');
-                wordEl.className = 'p-3 bg-slate-50 rounded-lg flex items-center justify-between';
-                wordEl.innerHTML = `
-                    <div class="flex items-center">
-                        <input type="checkbox" class="word-checkbox h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4" data-word-id="${word.id}">
-                        <div>
-                            <p class="font-semibold text-slate-800 capitalize">${word.word}</p>
-                            <p class="text-sm text-slate-600">${word.definition}</p>
+        } else {
+            words.sort((a, b) => (b.addedAt?.seconds || 0) - (a.addedAt?.seconds || 0))
+                 .forEach(word => {
+                    const wordEl = document.createElement('div');
+                    wordEl.className = 'p-3 bg-slate-50 rounded-lg flex items-center justify-between';
+                    // SỬA LỖI: Lưu trữ dữ liệu từ vựng để ôn tập
+                    wordEl.dataset.wordData = JSON.stringify({
+                        word: word.word,
+                        ipa: word.ipa,
+                        meaning: word.definition,
+                        example: word.example
+                    });
+                    wordEl.innerHTML = `
+                        <div class="flex items-center">
+                            <input type="checkbox" class="word-checkbox h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4" data-word-id="${word.id}">
+                            <div>
+                                <p class="font-semibold text-slate-800 capitalize">${word.word}</p>
+                                <p class="text-sm text-slate-600">${word.definition}</p>
+                            </div>
                         </div>
-                    </div>
-                    <button class="delete-word-btn text-red-400 hover:text-red-600 text-xl" data-word-id="${word.id}" data-deck-id="${deckId}" title="Xóa từ này">🗑️</button>
-                `;
-                deckWordList.appendChild(wordEl);
-             });
+                        <button class="delete-word-btn text-red-400 hover:text-red-600 text-xl" data-word-id="${word.id}" data-deck-id="${deckId}" title="Xóa từ này">🗑️</button>
+                    `;
+                    deckWordList.appendChild(wordEl);
+                 });
+        }
+        updateReviewButtonState(); // SỬA LỖI: Cập nhật trạng thái nút bấm sau khi tải
 
     } catch (error) {
         console.error("Error loading words in deck:", error);
         deckWordList.innerHTML = '<p class="text-center text-red-500">Không thể tải danh sách từ.</p>';
     }
 }
+
+// NEW FUNCTION: Update the review button based on checkbox selection
+function updateReviewButtonState() {
+    const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
+    const count = selectedCheckboxes.length;
+    
+    reviewSelectedWordsButton.textContent = `Ôn tập (${count} từ)`;
+    reviewSelectedWordsButton.disabled = count === 0;
+    
+    const allCheckboxes = deckWordList.querySelectorAll('.word-checkbox');
+    selectAllWordsCheckbox.checked = allCheckboxes.length > 0 && count === allCheckboxes.length;
+}
+
+// NEW FUNCTION: Start a review session with selected words
+function startDeckReview() {
+    const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
+    if (selectedCheckboxes.length === 0) return;
+
+    const reviewQuestions = [];
+    selectedCheckboxes.forEach(checkbox => {
+        const wordContainer = checkbox.closest('[data-word-data]');
+        if (wordContainer) {
+            const data = JSON.parse(wordContainer.dataset.wordData);
+            reviewQuestions.push({
+                type: 'flashcard',
+                word: data.word,
+                ipa: data.ipa,
+                meaning: data.meaning,
+                example: data.example
+            });
+        }
+    });
+
+    if (reviewQuestions.length > 0) {
+        currentQuizType = 'standard'; // Treat it as a standard quiz
+        quizData = {
+            topic: `Ôn tập: ${deckNameTitle.textContent}`,
+            level: 'Mixed',
+            quizType: 'vocabulary',
+            vocabMode: 'flashcard',
+            count: reviewQuestions.length,
+            raw: reviewQuestions, // Use the selected words directly
+            isRetry: true
+        };
+        sessionResults = [];
+        currentQuestionIndex = 0;
+        score = 0;
+        renderQuiz();
+        showView('quiz-view');
+    }
+}
+
 
 // New function for quick lookup and save inside a deck
 async function handleQuickLookupAndSave() {
@@ -1875,7 +1941,6 @@ async function handleQuickLookupAndSave() {
             throw new Error("AI did not return valid information.");
         }
         
-        // Display result for confirmation (optional, but good UX)
         quickLookupResult.innerHTML = `
             <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
                 <p>Đã thêm: <b class="capitalize">${word}</b> - ${wordInfo.definition}</p>
@@ -1883,10 +1948,8 @@ async function handleQuickLookupAndSave() {
         `;
         quickLookupInput.value = '';
 
-        // Save the word
         await saveWordToNotebook(word, wordInfo, currentDeckId);
         
-        // Refresh the word list in the current deck view
         const deckDoc = await getDoc(doc(db, "users", auth.currentUser.uid, "notebookDecks", currentDeckId));
         showDeckDetails(currentDeckId, deckDoc.data().name);
 
@@ -1905,8 +1968,6 @@ async function saveWordToNotebook(word, wordInfo, deckId) {
     const existingWordSnap = await getDocs(wordQuery);
 
     if (!existingWordSnap.empty) {
-        console.log(`Word "${cleanedWord}" already exists in this deck.`);
-        // Optionally show a message to the user
         if(wordInfoModal.classList.contains('active')) {
             saveWordFromInfoBtn.textContent = 'Từ này đã có trong bộ!';
             setTimeout(() => hideModal(wordInfoModal), 2000);
@@ -1918,11 +1979,8 @@ async function saveWordToNotebook(word, wordInfo, deckId) {
     const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
     
     try {
-        // Use a batch to ensure atomicity
         const batch = writeBatch(db);
-
-        // 1. Add the new word document
-        const newWordRef = doc(vocabRef); // Auto-generate ID
+        const newWordRef = doc(vocabRef);
         batch.set(newWordRef, {
             word: cleanedWord, 
             definition: wordInfo.definition || 'Chưa có giải thích.',
@@ -1931,15 +1989,10 @@ async function saveWordToNotebook(word, wordInfo, deckId) {
             deckId: deckId,
             addedAt: serverTimestamp()
         });
-        
-        // 2. Increment the word count in the deck document
         batch.update(deckRef, { wordCount: increment(1) });
-        
         await batch.commit();
-
-        notebookWords.add(cleanedWord); // Update global highlight cache
+        notebookWords.add(cleanedWord);
         
-        // Update UI in the modal if it's open
         if(wordInfoModal.classList.contains('active')) {
             saveWordFromInfoBtn.textContent = 'Đã lưu thành công!';
             saveWordFromInfoBtn.disabled = true;
@@ -1960,21 +2013,15 @@ async function deleteWordFromDeck(wordId, deckId) {
     if (!auth.currentUser) return;
     try {
         const batch = writeBatch(db);
-
-        // 1. Delete the word document
         const wordRef = doc(db, "users", auth.currentUser.uid, "vocabulary", wordId);
         batch.delete(wordRef);
-        
-        // 2. Decrement word count in the deck
         const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
         batch.update(deckRef, { wordCount: increment(-1) });
-
         await batch.commit();
         
-        // Refresh the view
         const deckDoc = await getDoc(deckRef);
         await showDeckDetails(deckId, deckDoc.data().name);
-        await fetchUserNotebook(); // Update global highlighting
+        await fetchUserNotebook();
 
     } catch (error) {
         console.error("Error deleting word:", error);
@@ -2353,6 +2400,17 @@ addSoundToListener(createNewDeckButton, 'click', createNewDeck);
 addSoundToListener(backToDecksView, 'click', showNotebook);
 addSoundToListener(quickLookupButton, 'click', handleQuickLookupAndSave);
 quickLookupInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleQuickLookupAndSave(); });
+addSoundToListener(reviewSelectedWordsButton, 'click', startDeckReview); // SỬA LỖI: Thêm listener cho nút Ôn tập
+
+// SỬA LỖI: Thêm listener cho checkbox "Chọn tất cả"
+selectAllWordsCheckbox.addEventListener('change', () => {
+    const isChecked = selectAllWordsCheckbox.checked;
+    deckWordList.querySelectorAll('.word-checkbox').forEach(checkbox => {
+        checkbox.checked = isChecked;
+    });
+    updateReviewButtonState();
+});
+
 
 // Event Delegation for dynamically created notebook elements
 appContainer.addEventListener('click', (e) => {
@@ -2380,6 +2438,10 @@ appContainer.addEventListener('click', (e) => {
         playSound('click');
         const { wordId, deckId } = e.target.dataset;
         deleteWordFromDeck(wordId, deckId);
+    }
+    // SỬA LỖI: Thêm listener cho các checkbox của từng từ
+    if (e.target && e.target.classList.contains('word-checkbox')) {
+        updateReviewButtonState();
     }
 });
 
