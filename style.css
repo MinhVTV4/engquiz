@@ -7,7 +7,8 @@ body { font-family: 'Be Vietnam Pro', sans-serif; }
 .btn-spinner { width: 20px; height: 20px; border-width: 3px; border-left-color: white; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-#passageText, #transcriptContainer, #notebookList, #historyList, #reviewList, #libraryList, #writingFeedbackContainer, #reinforceContent, #learningPathContainer, #reinforcementReviewList, #conversationLog { max-height: 60vh; overflow-y: auto; }
+/* CẬP NHẬT: Thêm #deckList và #deckWordList vào danh sách các container có thể cuộn */
+#passageText, #transcriptContainer, #deckList, #deckWordList, #historyList, #reviewList, #libraryList, #writingFeedbackContainer, #reinforceContent, #learningPathContainer, #reinforcementReviewList, #conversationLog { max-height: 60vh; overflow-y: auto; }
 .topic-container, .vocab-mode-container, #customTopicContainer { transition: all 0.3s ease-in-out; overflow: hidden; }
 
 /* --- Cải tiến UI/UX --- */
@@ -38,7 +39,7 @@ body { font-family: 'Be Vietnam Pro', sans-serif; }
 .translate-icon { cursor: pointer; color: #3b82f6; margin-left: 8px; font-size: 1.25rem; display: inline-block; vertical-align: middle; }
 .highlight-word { background-color: #facc15; color: #1f2937; padding: 2px 0; border-radius: 3px; }
 
-/* --- NEW: Word Lookup Styles --- */
+/* --- Word Lookup Styles --- */
 .lookup-word { cursor: pointer; }
 .lookup-word:hover { background-color: #e0f2fe; }
 .saved-word-highlight { border-bottom: 2px dotted #22c55e; cursor: help; }
