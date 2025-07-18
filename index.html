@@ -86,6 +86,8 @@
                             <option value="grammar">Ngữ pháp (Grammar)</option>
                             <option value="listening">Nghe hiểu (Listening)</option>
                             <option value="writing">Luyện Viết (Writing)</option>
+                            <!-- MỚI: Thêm tùy chọn Hội thoại -->
+                            <option value="conversation">Hội thoại thực (Speaking)</option>
                         </select>
                     </div>
                     <div id="vocabModeContainer" class="vocab-mode-container mt-4">
@@ -168,9 +170,7 @@
                 <button id="endDiagnosticConversationButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc</button>
             </div>
             <div class="min-h-[400px] flex flex-col">
-                <div id="conversationLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto">
-                    <!-- AI and user messages will appear here -->
-                </div>
+                <div id="conversationLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto"></div>
                 <div id="conversationInputArea" class="mt-auto flex items-center gap-3">
                     <button id="micButton" class="p-4 rounded-full bg-indigo-200 hover:bg-indigo-300 text-indigo-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
@@ -181,24 +181,52 @@
             </div>
         </div>
 
+        <!-- MỚI: Màn hình Hội thoại Thực hành -->
+        <div id="conversation-practice-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-purple-600">Hội thoại thực</h2>
+                    <p id="conversationPracticeTopic" class="text-slate-500"></p>
+                </div>
+                <button id="endConversationPracticeButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc & Nhận xét</button>
+            </div>
+            <div class="min-h-[400px] flex flex-col">
+                <div id="conversationPracticeLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto"></div>
+                <div id="conversationPracticeInputArea" class="mt-auto flex items-center gap-3">
+                    <button id="micPracticeButton" class="p-4 rounded-full bg-indigo-200 hover:bg-indigo-300 text-indigo-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
+                    </button>
+                    <input type="text" id="conversationPracticeTextInput" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Hoặc gõ câu trả lời của bạn ở đây...">
+                    <button id="sendPracticeTextButton" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg">Gửi</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MỚI: Màn hình Phản hồi Hội thoại -->
+        <div id="conversation-feedback-view" class="view">
+             <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-purple-600">Nhận xét từ AI</h2>
+                <button id="backToSetupFromConvFeedback" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+            </div>
+            <div id="conversationFeedbackContainer" class="space-y-4">
+                <!-- Phản hồi sẽ được render ở đây -->
+            </div>
+        </div>
+
         <!-- Màn hình Lộ trình học tập -->
         <div id="learning-path-view" class="view">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-3xl font-bold text-teal-600">Lộ trình của bạn</h2>
                 <button id="backToSetupFromPath" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
             </div>
-            <div id="learningPathContainer" class="space-y-3 pr-2">
-                <!-- Lộ trình sẽ được render ở đây -->
-            </div>
+            <div id="learningPathContainer" class="space-y-3 pr-2"></div>
         </div>
         
         <!-- Màn hình Chọn mục tiêu -->
         <div id="goal-setting-view" class="view">
             <h2 class="text-3xl font-bold text-slate-800 mb-2 text-center">Mục tiêu của bạn là gì?</h2>
             <p class="text-slate-500 text-lg mb-8 text-center">Chọn một mục tiêu để AI cá nhân hóa lộ trình tốt hơn.</p>
-            <div id="goalOptionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Các mục tiêu sẽ được render ở đây -->
-            </div>
+            <div id="goalOptionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
         <!-- Màn hình Thư viện bài tập -->
@@ -220,11 +248,7 @@
             <div id="historyList" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
         </div>
 
-        <!-- ================================================================= -->
         <!-- SỔ TAY (NOTEBOOK) -->
-        <!-- ================================================================= -->
-
-        <!-- Màn hình Sổ tay Chính (Danh sách các Bộ thẻ) -->
         <div id="notebook-view" class="view">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-teal-600">Sổ tay của bạn</h2>
@@ -236,13 +260,11 @@
             <div id="deckList" class="space-y-3"></div>
         </div>
 
-        <!-- Màn hình Chi tiết Bộ thẻ -->
         <div id="deck-details-view" class="view">
             <div class="flex justify-between items-center mb-4">
                 <h2 id="deckNameTitle" class="text-3xl font-bold text-teal-600">Tên bộ thẻ</h2>
                 <button id="backToDecksView" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại Sổ tay</button>
             </div>
-
             <div class="p-4 bg-sky-50 rounded-lg border border-sky-200 mb-6">
                 <h3 class="font-semibold text-lg text-sky-800 mb-2">Thêm từ vào bộ thẻ này</h3>
                 <div class="flex items-center gap-2">
@@ -251,13 +273,10 @@
                 </div>
                 <div id="quickLookupResult" class="mt-4"></div>
             </div>
-
             <div class="mb-4 flex flex-col md:flex-row gap-4">
                 <input type="search" id="deckSearchInput" placeholder="Tìm từ trong bộ..." class="w-full p-2 border border-slate-300 rounded-lg">
             </div>
-
             <div id="deckWordList" class="space-y-2"></div>
-
             <div class="mt-6 flex justify-between items-center">
                 <div class="flex items-center">
                     <input type="checkbox" id="selectAllWordsCheckbox" class="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
@@ -265,17 +284,11 @@
                 </div>
                 <div id="deckPagination" class="text-sm"></div>
             </div>
-
             <div class="mt-6 flex flex-col md:flex-row gap-4">
                 <button id="reviewSelectedWordsButton" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-orange-300">Ôn tập (0 từ)</button>
                 <button id="moveSelectedWordsButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-indigo-300">Di chuyển (0 từ)</button>
             </div>
         </div>
-
-        <!-- ================================================================= -->
-        <!-- HẾT PHẦN SỔ TAY -->
-        <!-- ================================================================= -->
-
 
         <!-- Màn hình Đang tải câu hỏi -->
         <div id="loading-view" class="view text-center py-16">
@@ -417,7 +430,6 @@
         </div>
     </div>
 
-    <!-- MỚI: Modal Tùy chọn Ôn tập -->
     <div id="reviewOptionsModal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Chọn hình thức ôn tập</h3>
