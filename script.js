@@ -123,6 +123,7 @@ let recognition;
 let chartInstance;
 let notebookWords = new Set(); // Used for global highlighting of saved words
 let currentDeckId = null; 
+let isInitialAuthComplete = false; // SỬA LỖI: Cờ để kiểm tra xác thực lần đầu
 
 // --- Audio State & Setup ---
 const synth = window.speechSynthesis;
@@ -227,15 +228,22 @@ async function fetchUserNotebook() {
     notebookWords = new Set(querySnapshot.docs.map(doc => doc.data().word.toLowerCase()));
 }
 
+// SỬA LỖI: Logic xác thực
 onAuthStateChanged(auth, async (user) => {
     if (user) { 
         welcomeMessage.textContent = `Chào mừng, ${user.email}!`; 
         await updateUserStreak(user.uid); 
         await checkUserLearningPath(user.uid);
         await fetchUserNotebook();
-        showView('setup-view'); 
+        
+        // Chỉ hiển thị màn hình setup trong lần xác thực đầu tiên
+        if (!isInitialAuthComplete) {
+            showView('setup-view'); 
+            isInitialAuthComplete = true;
+        }
     } else { 
         showView('auth-view'); 
+        isInitialAuthComplete = false; // Reset khi đăng xuất
         userHistoryCache = []; 
         currentUserPath = null;
         notebookWords.clear();
@@ -1153,8 +1161,8 @@ async function showResult() {
     resultScoreContainer.style.display = quizData.vocabMode === 'flashcard' ? 'none' : 'block';
     reviewAnswersButton.style.display = quizData.vocabMode === 'flashcard' ? 'none' : 'block';
     
-    if (quizData.vocabMode === 'flashcard' && quizData.isReview) {
-        resultMessage.textContent = `Tuyệt vời! Bạn đã ôn tập xong ${total} thẻ.`;
+    if (quizData.isReview) {
+        resultMessage.textContent = `Tuyệt vời! Bạn đã ôn tập xong ${total} từ.`;
         playAgainButton.textContent = "Về lại bộ thẻ";
         playAgainButton.onclick = async () => {
             const deckDoc = await getDoc(doc(db, "users", auth.currentUser.uid, "notebookDecks", currentDeckId));
