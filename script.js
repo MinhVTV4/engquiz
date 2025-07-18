@@ -73,7 +73,7 @@ const wordInfoContent = document.getElementById('wordInfoContent');
 const saveWordFromInfoBtn = document.getElementById('saveWordFromInfoBtn');
 const closeWordInfoModal = document.getElementById('closeWordInfoModal');
 
-// NOTEBOOK V4 DOM Elements
+// NOTEBOOK V5 DOM Elements
 const backToSetupFromNotebook = document.getElementById('backToSetupFromNotebook');
 const createNewDeckButton = document.getElementById('createNewDeckButton');
 const deckList = document.getElementById('deckList');
@@ -88,6 +88,7 @@ const deckWordList = document.getElementById('deckWordList');
 const selectAllWordsCheckbox = document.getElementById('selectAllWordsCheckbox');
 const deckPagination = document.getElementById('deckPagination');
 const reviewSelectedWordsButton = document.getElementById('reviewSelectedWordsButton');
+const moveSelectedWordsButton = document.getElementById('moveSelectedWordsButton');
 const inputModal = document.getElementById('inputModal');
 const inputTitle = document.getElementById('inputTitle');
 const inputLabel = document.getElementById('inputLabel');
@@ -97,6 +98,11 @@ const inputCancelBtn = document.getElementById('inputCancelBtn');
 const inputOkBtn = document.getElementById('inputOkBtn');
 const deckSelectionContainer = document.getElementById('deckSelectionContainer');
 const deckSelectDropdown = document.getElementById('deckSelectDropdown');
+const moveWordModal = document.getElementById('moveWordModal');
+const moveWordTitle = document.getElementById('moveWordTitle');
+const moveDeckSelect = document.getElementById('moveDeckSelect');
+const moveWordCancelBtn = document.getElementById('moveWordCancelBtn');
+const moveWordOkBtn = document.getElementById('moveWordOkBtn');
 
 
 // App State
@@ -185,11 +191,11 @@ function showConfirmModal(title, message, onConfirm) {
     confirmCancelBtn.onclick = () => hideModal(confirmModal);
 }
 
-function showInputModal(title, label, placeholder, onConfirm) {
+function showInputModal(title, label, placeholder, onConfirm, initialValue = '') {
     inputTitle.textContent = title;
     inputLabel.textContent = label;
     inputField.placeholder = placeholder;
-    inputField.value = '';
+    inputField.value = initialValue;
     inputError.textContent = '';
     showModal(inputModal);
     inputField.focus();
@@ -401,7 +407,6 @@ function renderTextWithClickableWords(container, text) {
     });
 }
 
-// UPDATED: showWordInfo now populates a deck dropdown
 async function showWordInfo(word) {
     const cleanedWord = word.trim().toLowerCase().replace(/[^a-z'-]/g, '');
     if (!cleanedWord) return;
@@ -412,7 +417,6 @@ async function showWordInfo(word) {
     saveWordFromInfoBtn.disabled = true;
     wordInfoSpeakBtn.onclick = () => playSpeech(cleanedWord);
     
-    // Fetch user's decks and populate dropdown
     const decks = await getDecks();
     deckSelectDropdown.innerHTML = '';
     if (decks.length > 0) {
@@ -1113,7 +1117,6 @@ function moveToNextQuestion() {
 }
 
 async function showResult() {
-    // Reset result view for standard quizzes
     playAgainButton.textContent = "Làm lại";
     playAgainButton.onclick = () => { playSound('click'); showView('setup-view'); };
     reviewAnswersButton.textContent = "Xem lại bài làm";
@@ -1129,7 +1132,6 @@ async function showResult() {
     
     if (quizData.vocabMode === 'flashcard') {
         resultMessage.textContent = `Tuyệt vời! Bạn đã ôn tập xong ${total} thẻ.`;
-         // SỬA LỖI: Nút "Làm lại" nên quay về màn hình chi tiết bộ thẻ
         playAgainButton.textContent = "Về lại bộ thẻ";
         playAgainButton.onclick = async () => {
             const deckDoc = await getDoc(doc(db, "users", auth.currentUser.uid, "notebookDecks", currentDeckId));
@@ -1713,10 +1715,9 @@ async function generateRecommendations(stats) {
 }
 
 // ========================================================================
-// --- NOTEBOOK V4 FUNCTIONS ---
+// --- NOTEBOOK V5 FUNCTIONS ---
 // ========================================================================
 
-// Get all decks for the current user
 async function getDecks() {
     if (!auth.currentUser) return [];
     const decksRef = collection(db, "users", auth.currentUser.uid, "notebookDecks");
@@ -1725,7 +1726,6 @@ async function getDecks() {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// Show the main notebook view with a list of decks
 async function showNotebook() {
     if (!auth.currentUser) { showError("Bạn cần đăng nhập để xem sổ tay."); return; }
     showView('notebook-view');
@@ -1741,17 +1741,16 @@ async function showNotebook() {
         decks.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
              .forEach(deck => {
                 const deckEl = document.createElement('div');
-                deckEl.className = 'bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
-                deckEl.onclick = () => showDeckDetails(deck.id, deck.name);
+                deckEl.className = 'bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow';
                 deckEl.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <div>
+                        <div class="flex-grow cursor-pointer" data-action="open-deck" data-deck-id="${deck.id}" data-deck-name="${deck.name}">
                             <h3 class="font-bold text-lg text-slate-800">${deck.name}</h3>
                             <p class="text-sm text-slate-500">${deck.wordCount || 0} từ</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3 ml-4">
+                             <button class="edit-deck-btn text-blue-400 hover:text-blue-600 text-xl" data-deck-id="${deck.id}" data-deck-name="${deck.name}" title="Sửa tên bộ thẻ">✏️</button>
                              <button class="delete-deck-btn text-red-400 hover:text-red-600 text-xl" data-deck-id="${deck.id}" data-deck-name="${deck.name}" title="Xóa bộ thẻ này">🗑️</button>
-                             <span class="text-slate-400">&rarr;</span>
                         </div>
                     </div>
                 `;
@@ -1764,7 +1763,6 @@ async function showNotebook() {
     }
 }
 
-// Create a new deck
 async function createNewDeck() {
     showInputModal('Tạo bộ thẻ mới', 'Tên bộ thẻ', 'VD: IELTS Writing Task 2...', async (deckName) => {
         if (!auth.currentUser) return;
@@ -1775,7 +1773,7 @@ async function createNewDeck() {
                 wordCount: 0,
                 createdAt: serverTimestamp()
             });
-            await showNotebook(); // Refresh the deck list
+            await showNotebook();
         } catch (error) {
             console.error("Error creating deck:", error);
             showError("Không thể tạo bộ thẻ mới.");
@@ -1783,42 +1781,43 @@ async function createNewDeck() {
     });
 }
 
-// Delete a deck and all words within it
+async function editDeckName(deckId, currentName) {
+    showInputModal('Sửa tên bộ thẻ', 'Tên bộ thẻ mới', '', async (newName) => {
+        if (!auth.currentUser || newName === currentName) return;
+        const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
+        try {
+            await updateDoc(deckRef, { name: newName });
+            await showNotebook();
+        } catch (error) {
+            console.error("Error renaming deck:", error);
+            showError("Không thể đổi tên bộ thẻ.");
+        }
+    }, currentName);
+}
+
 async function deleteDeck(deckId, deckName) {
     showConfirmModal('Xóa bộ thẻ?', `Bạn có chắc muốn xóa vĩnh viễn bộ thẻ "${deckName}" và toàn bộ từ vựng bên trong? Hành động này không thể hoàn tác.`, async () => {
         if (!auth.currentUser) return;
         deckList.innerHTML = '<div class="spinner mx-auto"></div>';
         try {
             const batch = writeBatch(db);
-            
-            // 1. Delete all words associated with this deck
             const wordsRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
             const q = query(wordsRef, where("deckId", "==", deckId));
             const wordsSnapshot = await getDocs(q);
-            wordsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            // 2. Delete the deck itself
+            wordsSnapshot.forEach(doc => batch.delete(doc.ref));
             const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
             batch.delete(deckRef);
-
-            // 3. Commit the batch
             await batch.commit();
-            
-            // 4. Refresh UI
-            await fetchUserNotebook(); // Re-fetch all words to update highlighting
+            await fetchUserNotebook();
             await showNotebook();
-
         } catch (error) {
             console.error("Error deleting deck:", error);
             showError("Đã xảy ra lỗi khi xóa bộ thẻ.");
-            await showNotebook(); // Refresh list even on error
+            await showNotebook();
         }
     });
 }
 
-// Show the details of a specific deck
 async function showDeckDetails(deckId, deckName) {
     if (!auth.currentUser) return;
     currentDeckId = deckId;
@@ -1827,16 +1826,15 @@ async function showDeckDetails(deckId, deckName) {
     deckWordList.innerHTML = '<div class="spinner mx-auto"></div>';
     quickLookupResult.innerHTML = '';
     quickLookupInput.value = '';
-    selectAllWordsCheckbox.checked = false; // SỬA LỖI: Reset checkbox
+    selectAllWordsCheckbox.checked = false;
     
     try {
         const wordsRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
         const q = query(wordsRef, where("deckId", "==", deckId));
         const querySnapshot = await getDocs(q);
-        
         const words = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        deckWordList.innerHTML = ''; // Xóa spinner trước khi thêm
+        deckWordList.innerHTML = '';
         if (words.length === 0) {
             deckWordList.innerHTML = '<p class="text-center text-slate-500">Chưa có từ nào trong bộ thẻ này. Hãy dùng box "Tra cứu & Thêm" ở trên nhé!</p>';
         } else {
@@ -1844,12 +1842,8 @@ async function showDeckDetails(deckId, deckName) {
                  .forEach(word => {
                     const wordEl = document.createElement('div');
                     wordEl.className = 'p-3 bg-slate-50 rounded-lg flex items-center justify-between';
-                    // SỬA LỖI: Lưu trữ dữ liệu từ vựng để ôn tập
                     wordEl.dataset.wordData = JSON.stringify({
-                        word: word.word,
-                        ipa: word.ipa,
-                        meaning: word.definition,
-                        example: word.example
+                        word: word.word, ipa: word.ipa, meaning: word.definition, example: word.example
                     });
                     wordEl.innerHTML = `
                         <div class="flex items-center">
@@ -1864,27 +1858,27 @@ async function showDeckDetails(deckId, deckName) {
                     deckWordList.appendChild(wordEl);
                  });
         }
-        updateReviewButtonState(); // SỬA LỖI: Cập nhật trạng thái nút bấm sau khi tải
-
+        updateDeckActionButtonsState();
     } catch (error) {
         console.error("Error loading words in deck:", error);
         deckWordList.innerHTML = '<p class="text-center text-red-500">Không thể tải danh sách từ.</p>';
     }
 }
 
-// NEW FUNCTION: Update the review button based on checkbox selection
-function updateReviewButtonState() {
+function updateDeckActionButtonsState() {
     const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
     const count = selectedCheckboxes.length;
     
     reviewSelectedWordsButton.textContent = `Ôn tập (${count} từ)`;
     reviewSelectedWordsButton.disabled = count === 0;
     
+    moveSelectedWordsButton.textContent = `Di chuyển (${count} từ)`;
+    moveSelectedWordsButton.disabled = count === 0;
+    
     const allCheckboxes = deckWordList.querySelectorAll('.word-checkbox');
     selectAllWordsCheckbox.checked = allCheckboxes.length > 0 && count === allCheckboxes.length;
 }
 
-// NEW FUNCTION: Start a review session with selected words
 function startDeckReview() {
     const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
     if (selectedCheckboxes.length === 0) return;
@@ -1895,36 +1889,88 @@ function startDeckReview() {
         if (wordContainer) {
             const data = JSON.parse(wordContainer.dataset.wordData);
             reviewQuestions.push({
-                type: 'flashcard',
-                word: data.word,
-                ipa: data.ipa,
-                meaning: data.meaning,
-                example: data.example
+                type: 'flashcard', word: data.word, ipa: data.ipa, meaning: data.meaning, example: data.example
             });
         }
     });
 
     if (reviewQuestions.length > 0) {
-        currentQuizType = 'standard'; // Treat it as a standard quiz
+        currentQuizType = 'standard';
         quizData = {
-            topic: `Ôn tập: ${deckNameTitle.textContent}`,
-            level: 'Mixed',
-            quizType: 'vocabulary',
-            vocabMode: 'flashcard',
-            count: reviewQuestions.length,
-            raw: reviewQuestions, // Use the selected words directly
-            isRetry: true
+            topic: `Ôn tập: ${deckNameTitle.textContent}`, level: 'Mixed', quizType: 'vocabulary',
+            vocabMode: 'flashcard', count: reviewQuestions.length, raw: reviewQuestions, isRetry: true
         };
-        sessionResults = [];
-        currentQuestionIndex = 0;
-        score = 0;
-        renderQuiz();
-        showView('quiz-view');
+        sessionResults = []; currentQuestionIndex = 0; score = 0;
+        renderQuiz(); showView('quiz-view');
+    }
+}
+
+async function showMoveWordsModal() {
+    const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
+    const count = selectedCheckboxes.length;
+    if (count === 0) return;
+
+    moveWordTitle.textContent = `Di chuyển ${count} từ`;
+    moveDeckSelect.innerHTML = '<option>Đang tải...</option>';
+    showModal(moveWordModal);
+
+    const allDecks = await getDecks();
+    moveDeckSelect.innerHTML = '';
+    allDecks.forEach(deck => {
+        if (deck.id !== currentDeckId) { // Exclude the current deck
+            const option = document.createElement('option');
+            option.value = deck.id;
+            option.textContent = deck.name;
+            moveDeckSelect.appendChild(option);
+        }
+    });
+
+    if (moveDeckSelect.options.length === 0) {
+        moveDeckSelect.innerHTML = '<option>Không có bộ thẻ nào khác</option>';
+        moveWordOkBtn.disabled = true;
+    } else {
+        moveWordOkBtn.disabled = false;
+    }
+}
+
+async function moveSelectedWords() {
+    const targetDeckId = moveDeckSelect.value;
+    if (!targetDeckId || !auth.currentUser) return;
+
+    const selectedCheckboxes = deckWordList.querySelectorAll('.word-checkbox:checked');
+    const wordIdsToMove = Array.from(selectedCheckboxes).map(cb => cb.dataset.wordId);
+    const sourceDeckId = currentDeckId;
+
+    hideModal(moveWordModal);
+    deckWordList.innerHTML = '<div class="spinner mx-auto"></div>';
+
+    try {
+        const batch = writeBatch(db);
+        const vocabRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
+
+        wordIdsToMove.forEach(wordId => {
+            const wordDocRef = doc(vocabRef, wordId);
+            batch.update(wordDocRef, { deckId: targetDeckId });
+        });
+
+        const sourceDeckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", sourceDeckId);
+        batch.update(sourceDeckRef, { wordCount: increment(-wordIdsToMove.length) });
+
+        const targetDeckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", targetDeckId);
+        batch.update(targetDeckRef, { wordCount: increment(wordIdsToMove.length) });
+
+        await batch.commit();
+
+        const sourceDeckDoc = await getDoc(sourceDeckRef);
+        await showDeckDetails(sourceDeckId, sourceDeckDoc.data().name);
+
+    } catch (error) {
+        console.error("Error moving words:", error);
+        showError("Không thể di chuyển từ. Vui lòng thử lại.");
     }
 }
 
 
-// New function for quick lookup and save inside a deck
 async function handleQuickLookupAndSave() {
     const word = quickLookupInput.value.trim().toLowerCase();
     if (!word || !currentDeckId) return;
@@ -1959,7 +2005,6 @@ async function handleQuickLookupAndSave() {
     }
 }
 
-// UPDATED: saveWordToNotebook now handles deckId and wordCount
 async function saveWordToNotebook(word, wordInfo, deckId) {
     if (!auth.currentUser || !deckId) return;
     const cleanedWord = word.toLowerCase();
@@ -2008,7 +2053,6 @@ async function saveWordToNotebook(word, wordInfo, deckId) {
     }
 }
 
-// Delete a single word from a deck
 async function deleteWordFromDeck(wordId, deckId) {
     if (!auth.currentUser) return;
     try {
@@ -2394,54 +2438,76 @@ addSoundToListener(backToSetupFromPath, 'click', () => showView('setup-view'));
 addSoundToListener(backToPathFromReinforcement, 'click', showLearningPath);
 addSoundToListener(retryPathStepFromReinforcement, 'click', startPathStep);
 
-// NOTEBOOK V4 Event Listeners
+// NOTEBOOK V5 Event Listeners
 addSoundToListener(showNotebookButton, 'click', showNotebook);
 addSoundToListener(createNewDeckButton, 'click', createNewDeck);
 addSoundToListener(backToDecksView, 'click', showNotebook);
 addSoundToListener(quickLookupButton, 'click', handleQuickLookupAndSave);
 quickLookupInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleQuickLookupAndSave(); });
-addSoundToListener(reviewSelectedWordsButton, 'click', startDeckReview); // SỬA LỖI: Thêm listener cho nút Ôn tập
+addSoundToListener(reviewSelectedWordsButton, 'click', startDeckReview);
+addSoundToListener(moveSelectedWordsButton, 'click', showMoveWordsModal);
+addSoundToListener(moveWordOkBtn, 'click', moveSelectedWords);
+addSoundToListener(moveWordCancelBtn, 'click', () => hideModal(moveWordModal));
 
-// SỬA LỖI: Thêm listener cho checkbox "Chọn tất cả"
 selectAllWordsCheckbox.addEventListener('change', () => {
     const isChecked = selectAllWordsCheckbox.checked;
     deckWordList.querySelectorAll('.word-checkbox').forEach(checkbox => {
         checkbox.checked = isChecked;
     });
-    updateReviewButtonState();
+    updateDeckActionButtonsState();
 });
 
 
 // Event Delegation for dynamically created notebook elements
 appContainer.addEventListener('click', (e) => {
-    // Start Path Step
-    if (e.target && e.target.closest('.start-step-btn')) {
+    const target = e.target;
+    // Open Deck
+    const openDeckTarget = target.closest('[data-action="open-deck"]');
+    if (openDeckTarget) {
         playSound('click');
-        startPathStep();
+        const { deckId, deckName } = openDeckTarget.dataset;
+        showDeckDetails(deckId, deckName);
+        return;
     }
-    // Reinforcement button in quiz feedback
-    if (e.target && e.target.closest('.reinforce-btn')) {
+    // Edit Deck Button
+    if (target.classList.contains('edit-deck-btn')) {
         playSound('click');
-        const resultIndex = parseInt(e.target.closest('.reinforce-btn').dataset.questionIndex, 10);
-        const result = sessionResults[resultIndex];
-        requestReinforcement(result.question, result.userAnswer);
+        const { deckId, deckName } = target.dataset;
+        editDeckName(deckId, deckName);
+        return;
     }
     // Delete Deck Button
-    if (e.target && e.target.classList.contains('delete-deck-btn')) {
-        e.stopPropagation(); // Prevent triggering the deck click
+    if (target.classList.contains('delete-deck-btn')) {
         playSound('click');
-        const { deckId, deckName } = e.target.dataset;
+        const { deckId, deckName } = target.dataset;
         deleteDeck(deckId, deckName);
+        return;
     }
-    // Delete Word Button in Deck Details
-    if (e.target && e.target.classList.contains('delete-word-btn')) {
+    // Delete Word Button
+    if (target.classList.contains('delete-word-btn')) {
         playSound('click');
-        const { wordId, deckId } = e.target.dataset;
+        const { wordId, deckId } = target.dataset;
         deleteWordFromDeck(wordId, deckId);
+        return;
     }
-    // SỬA LỖI: Thêm listener cho các checkbox của từng từ
-    if (e.target && e.target.classList.contains('word-checkbox')) {
-        updateReviewButtonState();
+    // Word Checkbox
+    if (target.classList.contains('word-checkbox')) {
+        updateDeckActionButtonsState();
+        return;
+    }
+    // Start Path Step
+    if (target.closest('.start-step-btn')) {
+        playSound('click');
+        startPathStep();
+        return;
+    }
+    // Reinforcement button
+    if (target.closest('.reinforce-btn')) {
+        playSound('click');
+        const resultIndex = parseInt(target.closest('.reinforce-btn').dataset.questionIndex, 10);
+        const result = sessionResults[resultIndex];
+        requestReinforcement(result.question, result.userAnswer);
+        return;
     }
 });
 
