@@ -221,7 +221,7 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- SỔ TAY (NOTEBOOK) - CẤU TRÚC MỚI -->
+        <!-- SỔ TAY (NOTEBOOK) -->
         <!-- ================================================================= -->
 
         <!-- Màn hình Sổ tay Chính (Danh sách các Bộ thẻ) -->
@@ -233,9 +233,7 @@
                     <button id="backToSetupFromNotebook" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
                 </div>
             </div>
-            <div id="deckList" class="space-y-3">
-                <!-- Danh sách các bộ thẻ sẽ được render ở đây -->
-            </div>
+            <div id="deckList" class="space-y-3"></div>
         </div>
 
         <!-- Màn hình Chi tiết Bộ thẻ -->
@@ -258,9 +256,7 @@
                 <input type="search" id="deckSearchInput" placeholder="Tìm từ trong bộ..." class="w-full p-2 border border-slate-300 rounded-lg">
             </div>
 
-            <div id="deckWordList" class="space-y-2">
-                <!-- Danh sách từ vựng sẽ được render ở đây -->
-            </div>
+            <div id="deckWordList" class="space-y-2"></div>
 
             <div class="mt-6 flex justify-between items-center">
                 <div class="flex items-center">
@@ -270,7 +266,6 @@
                 <div id="deckPagination" class="text-sm"></div>
             </div>
 
-            <!-- CẬP NHẬT: Nhóm các nút hành động -->
             <div class="mt-6 flex flex-col md:flex-row gap-4">
                 <button id="reviewSelectedWordsButton" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-orange-300">Ôn tập (0 từ)</button>
                 <button id="moveSelectedWordsButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-indigo-300">Di chuyển (0 từ)</button>
@@ -278,7 +273,7 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- HẾT PHẦN SỔ TAY MỚI -->
+        <!-- HẾT PHẦN SỔ TAY -->
         <!-- ================================================================= -->
 
 
@@ -422,7 +417,28 @@
         </div>
     </div>
 
-    <!-- MỚI: Modal để Di chuyển từ -->
+    <!-- MỚI: Modal Tùy chọn Ôn tập -->
+    <div id="reviewOptionsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Chọn hình thức ôn tập</h3>
+            <div class="space-y-3">
+                <button data-review-type="flashcard" class="review-option-btn w-full p-4 border-2 border-slate-300 rounded-lg hover:bg-slate-100 hover:border-amber-400 transition text-left">
+                    <h4 class="text-lg font-bold text-amber-700">🃏 Flashcards</h4>
+                    <p class="text-sm text-slate-600">Lật thẻ để xem nghĩa và ví dụ.</p>
+                </button>
+                <button data-review-type="multiple_choice" class="review-option-btn w-full p-4 border-2 border-slate-300 rounded-lg hover:bg-slate-100 hover:border-sky-400 transition text-left">
+                    <h4 class="text-lg font-bold text-sky-700">📝 Trắc nghiệm</h4>
+                    <p class="text-sm text-slate-600">Chọn đúng nghĩa cho mỗi từ.</p>
+                </button>
+                <button data-review-type="fill_in_the_blank" class="review-option-btn w-full p-4 border-2 border-slate-300 rounded-lg hover:bg-slate-100 hover:border-emerald-400 transition text-left">
+                    <h4 class="text-lg font-bold text-emerald-700">✍️ Điền vào chỗ trống</h4>
+                    <p class="text-sm text-slate-600">Điền từ đúng vào câu ví dụ.</p>
+                </button>
+            </div>
+             <button id="closeReviewOptionsModal" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Hủy</button>
+        </div>
+    </div>
+
     <div id="moveWordModal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="moveWordTitle" class="text-xl font-bold text-slate-800 mb-4">Di chuyển từ</h3>
