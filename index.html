@@ -219,14 +219,47 @@
             <div id="historyList" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
         </div>
 
-        <!-- Màn hình Sổ tay Từ vựng -->
-        <div id="notebook-view" class="view">
+        <!-- NEW: Màn hình Sổ tay Chính (Danh sách các Bộ thẻ) -->
+        <div id="notebook-decks-view" class="view">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-teal-600">Sổ tay Từ vựng</h2>
-                <button id="backToSetupFromNotebook" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+                <h2 class="text-3xl font-bold text-teal-600">Sổ tay của bạn</h2>
+                <button id="backToSetupFromDecks" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
             </div>
-            <div id="notebookList" class="space-y-3"></div>
+            <div id="deckList" class="space-y-3 mb-6">
+                <!-- Danh sách các bộ thẻ sẽ được hiển thị ở đây -->
+            </div>
+            <button id="showCreateDeckModalButton" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg">Tạo bộ thẻ mới</button>
         </div>
+
+        <!-- NEW: Màn hình Chi tiết Bộ thẻ -->
+        <div id="notebook-deck-detail-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="deckDetailTitle" class="text-3xl font-bold text-teal-600 truncate"></h2>
+                <button id="backToDecksViewButton" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Về Sổ tay</button>
+            </div>
+
+            <!-- Box Tra từ nhanh -->
+            <div class="mb-6 p-4 bg-slate-50 rounded-lg border">
+                <h3 class="font-semibold text-slate-700 mb-2">Thêm từ vào bộ thẻ này</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="deckLookupInput" placeholder="Nhập từ tiếng Anh..." class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+                    <button id="deckLookupButton" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </button>
+                </div>
+                <div id="deckLookupResultContainer" class="mt-3 hidden"></div>
+            </div>
+
+            <!-- Khu vực Quản lý -->
+            <div id="deckWordListContainer" class="space-y-3">
+                 <!-- Danh sách từ trong bộ thẻ sẽ được hiển thị ở đây -->
+            </div>
+            
+            <div id="deckActions" class="mt-6">
+                <button id="reviewSelectedWordsButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg disabled:bg-sky-300 disabled:cursor-not-allowed">Ôn tập (0 từ)</button>
+            </div>
+        </div>
+
 
         <!-- Màn hình Đang tải câu hỏi -->
         <div id="loading-view" class="view text-center py-16">
@@ -377,7 +410,7 @@
         </div>
     </div>
 
-    <!-- NEW/UPDATED: Word Info Modal -->
+    <!-- UPDATED: Word Info Modal -->
     <div id="wordInfoModal" class="modal-overlay">
         <div class="modal-content">
             <div class="flex justify-between items-center pb-4 border-b mb-4">
@@ -389,10 +422,28 @@
                 </div>
                 <button id="closeWordInfoModal" class="text-2xl font-bold text-slate-400 hover:text-red-500">&times;</button>
             </div>
-            <div id="wordInfoContent" class="space-y-4 min-h-[100px]">
-                <div class="spinner mx-auto"></div>
+            <div id="wordInfoContent" class="space-y-4 min-h-[100px]"></div>
+            <!-- NEW: Dropdown to select deck -->
+            <div class="mt-4">
+                <label for="deckSelectForSave" class="block text-sm font-medium mb-1 text-slate-700">Lưu vào bộ thẻ:</label>
+                <select id="deckSelectForSave" class="w-full p-3 border border-slate-300 rounded-lg bg-white"></select>
             </div>
             <button id="saveWordFromInfoBtn" class="mt-6 w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-teal-300 disabled:cursor-not-allowed">Lưu vào sổ tay</button>
+        </div>
+    </div>
+
+    <!-- NEW: Modal for creating a new deck -->
+    <div id="createDeckModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Tạo bộ thẻ mới</h3>
+            <div>
+                <label for="newDeckNameInput" class="block text-sm font-medium mb-1 text-slate-700">Tên bộ thẻ:</label>
+                <input type="text" id="newDeckNameInput" placeholder="VD: IELTS Writing Task 2" class="w-full p-3 border border-slate-300 rounded-lg">
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancelCreateDeckBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-5 rounded-lg">Hủy</button>
+                <button id="confirmCreateDeckBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-5 rounded-lg">Tạo</button>
+            </div>
         </div>
     </div>
 
