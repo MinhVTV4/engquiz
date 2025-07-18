@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI English Quiz - Luyện Tập Toàn Diện</title>
+    <!-- Tích hợp Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tích hợp Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Tích hợp Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tích hợp Tone.js cho hiệu ứng âm thanh -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Liên kết với file CSS tùy chỉnh -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div id="appContainer" class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8 transition-all duration-500">
+
+        <!-- Màn hình 0: Đăng nhập / Đăng ký -->
+        <div id="auth-view" class="view active">
+            <h1 class="text-3xl font-bold text-center text-sky-600 mb-2">Chào mừng bạn!</h1>
+            <p class="text-center text-slate-500 mb-8">Đăng nhập hoặc Đăng ký để lưu tiến trình học</p>
+            <div class="space-y-4">
+                <div><label for="emailInput" class="block text-sm font-medium mb-1 text-slate-700">Email</label><input type="email" id="emailInput" placeholder="ten@email.com" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"></div>
+                <div><label for="passwordInput" class="block text-sm font-medium mb-1 text-slate-700">Mật khẩu</label><input type="password" id="passwordInput" placeholder="••••••••" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"></div>
+            </div>
+            <p id="authError" class="text-red-500 text-sm text-center mt-4 h-5"></p>
+            <div class="mt-6 space-y-3">
+                 <button id="loginButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-3 disabled:bg-sky-300"><span class="btn-text">Đăng nhập</span><div class="spinner btn-spinner hidden"></div></button>
+                 <button id="registerButton" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-3 disabled:bg-slate-400"><span class="btn-text">Đăng ký</span><div class="spinner btn-spinner hidden"></div></button>
+            </div>
+        </div>
+
+        <!-- Màn hình 1: Thiết lập bài kiểm tra -->
+        <div id="setup-view" class="view">
+            <div class="flex justify-between items-start mb-6">
+                 <div><h1 class="text-3xl font-bold text-sky-600">AI English Quiz</h1><p id="welcomeMessage" class="text-slate-500">Chào mừng trở lại!</p></div>
+                 <div class="flex flex-col items-end space-y-2">
+                    <div id="streakDisplay" class="flex items-center justify-center bg-orange-100 text-orange-600 font-bold text-sm px-3 py-1 rounded-full">
+                        <span class="mr-1">🔥</span>
+                        <span id="streakCount">0</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="showNotebookButton" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Sổ tay</button>
+                        <button id="showHistoryButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Lịch sử</button>
+                        <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Đăng xuất</button>
+                    </div>
+                 </div>
+            </div>
+            
+            <div id="learningPathCTA" class="hidden mb-6 p-5 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl text-white shadow-lg">
+                <h2 class="text-2xl font-bold mb-2">Lộ trình của bạn đã sẵn sàng!</h2>
+                <p class="mb-4 opacity-90">Tiếp tục hành trình chinh phục tiếng Anh của bạn ngay thôi.</p>
+                <button id="continuePathButton" class="w-full bg-white hover:bg-slate-100 text-teal-600 font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105">Tiếp tục Lộ trình</button>
+            </div>
+            
+            <div id="placementTestContainer" class="mb-6 p-5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-xl text-white shadow-lg">
+                <h2 class="text-2xl font-bold mb-2">Bắt đầu Lộ trình học của bạn!</h2>
+                <p class="mb-4 opacity-90">Làm một bài kiểm tra ngắn để AI xác định trình độ và tạo lộ trình học tập cá nhân hóa cho riêng bạn.</p>
+                <button id="startPlacementTestButton" class="w-full bg-white hover:bg-slate-100 text-indigo-600 font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105">Làm bài kiểm tra trình độ</button>
+            </div>
+
+            <button id="quickStartButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-4 rounded-lg text-xl transition-transform transform hover:scale-105 flex items-center justify-center gap-3 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2z"></polygon></svg>
+                Luyện tập nhanh
+            </button>
+            <button id="showLibraryButton" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-4 rounded-lg text-xl transition-transform transform hover:scale-105 flex items-center justify-center gap-3 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                Thư viện bài tập
+            </button>
+            
+            <div class="space-y-6">
+                <div class="p-4 bg-slate-50 rounded-lg border">
+                    <h3 class="font-bold text-slate-700 mb-3 text-lg">Tùy chỉnh bài luyện tập</h3>
+                    <div>
+                        <label for="quizTypeSelect" class="block text-md font-semibold mb-2 text-slate-700">Chọn kỹ năng:</label>
+                        <select id="quizTypeSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white">
+                            <option value="vocabulary" selected>Từ vựng (Vocabulary)</option>
+                            <option value="reading">Đọc hiểu (Reading)</option>
+                            <option value="grammar">Ngữ pháp (Grammar)</option>
+                            <option value="listening">Nghe hiểu (Listening)</option>
+                            <option value="writing">Luyện Viết (Writing)</option>
+                        </select>
+                    </div>
+                    <div id="vocabModeContainer" class="vocab-mode-container mt-4">
+                        <label for="vocabModeSelect" class="block text-md font-semibold mb-2 text-slate-700">Chọn chế độ:</label>
+                        <select id="vocabModeSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white">
+                            <option value="multiple_choice" selected>Trắc nghiệm</option>
+                            <option value="fill_in_the_blank">Điền vào chỗ trống</option>
+                            <option value="word_formation">Dạng của từ</option>
+                            <option value="word_scramble">Sắp xếp chữ cái</option>
+                            <option value="matching">Nối từ</option>
+                            <option value="flashcard">Flashcards</option>
+                        </select>
+                    </div>
+                    <div id="topicContainer" class="topic-container mt-4">
+                        <label for="topicSelect" class="block text-md font-semibold mb-2 text-slate-700">Chọn chủ đề:</label>
+                        <select id="topicSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white">
+                            <option value="Travel">Du lịch</option>
+                            <option value="Technology" selected>Công nghệ</option>
+                            <option value="Food & Cooking">Ẩm thực</option>
+                            <option value="Health & Fitness">Sức khỏe</option>
+                            <option value="Work & Business">Công việc</option>
+                            <option value="Movies & Entertainment">Giải trí</option>
+                            <option value="Sports">Thể thao</option>
+                            <option value="custom">Khác (Tự nhập)...</option>
+                        </select>
+                    </div>
+                    <div id="customTopicContainer" class="hidden mt-4">
+                        <label for="customTopicInput" class="block text-md font-semibold mb-2 text-slate-700">Nhập chủ đề của bạn:</label>
+                        <input type="text" id="customTopicInput" placeholder="VD: Vũ trụ, Lịch sử, Âm nhạc..." class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                    </div>
+                    <div class="mt-4"><label for="levelSelect" class="block text-md font-semibold mb-2 text-slate-700">Chọn trình độ:</label><select id="levelSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white"><option value="A2">A2</option><option value="B1" selected>B1</option><option value="B2">B2</option><option value="C1">C1</option></select></div>
+                    <div id="questionCountContainer" class="mt-4">
+                        <label for="questionCountSelect" class="block text-md font-semibold mb-2 text-slate-700">Số lượng câu hỏi:</label>
+                        <select id="questionCountSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white">
+                            <option value="5" selected>5 câu</option>
+                            <option value="10">10 câu</option>
+                            <option value="15">15 câu</option>
+                        </select>
+                    </div>
+                    <button id="startQuizButton" class="mt-6 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-3">Bắt đầu</button>
+                </div>
+                <div class="mt-6 flex items-center justify-center">
+                    <input type="checkbox" id="autoAdvanceCheckbox" class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+                    <label for="autoAdvanceCheckbox" class="ml-2 block text-sm text-gray-900">Tự động chuyển câu sau khi trả lời</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Màn hình Chọn loại kiểm tra -->
+        <div id="assessment-choice-view" class="view">
+            <h2 class="text-3xl font-bold text-slate-800 mb-2 text-center">Chọn phương pháp kiểm tra</h2>
+            <p class="text-slate-500 text-lg mb-8 text-center">Hãy chọn cách bạn muốn AI đánh giá trình độ của mình.</p>
+            <div class="space-y-4">
+                <button id="startTraditionalTestButton" class="w-full p-6 border-2 border-slate-300 rounded-lg hover:bg-slate-100 hover:border-sky-400 transition text-left">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl">📝</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-sky-700">Bài trắc nghiệm</h3>
+                            <p class="text-slate-600">Làm một bài kiểm tra 12 câu hỏi để đánh giá nhanh các kỹ năng.</p>
+                        </div>
+                    </div>
+                </button>
+                <button id="startDiagnosticConversationButton" class="w-full p-6 border-2 border-slate-300 rounded-lg hover:bg-slate-100 hover:border-purple-400 transition text-left">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl">💬</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-purple-700">Trò chuyện với AI</h3>
+                            <p class="text-slate-600">Tham gia một cuộc hội thoại ngắn để AI đánh giá toàn diện hơn. <span class="text-xs font-bold text-white bg-purple-500 px-2 py-1 rounded-full ml-2">NÂNG CAO</span></p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            <button id="backToSetupFromChoice" class="mt-8 w-full text-slate-600 hover:text-slate-800 font-semibold py-2 px-4 rounded-lg text-md transition">Quay lại</button>
+        </div>
+        
+        <!-- Màn hình Hội thoại Chẩn đoán -->
+        <div id="diagnostic-conversation-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-purple-600">Trò chuyện Chẩn đoán</h2>
+                <button id="endDiagnosticConversationButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc</button>
+            </div>
+            <div class="min-h-[400px] flex flex-col">
+                <div id="conversationLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto">
+                    <!-- AI and user messages will appear here -->
+                </div>
+                <div id="conversationInputArea" class="mt-auto flex items-center gap-3">
+                    <button id="micButton" class="p-4 rounded-full bg-indigo-200 hover:bg-indigo-300 text-indigo-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
+                    </button>
+                    <input type="text" id="conversationTextInput" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Hoặc gõ câu trả lời của bạn ở đây...">
+                    <button id="sendTextButton" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg">Gửi</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Màn hình Lộ trình học tập -->
+        <div id="learning-path-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-teal-600">Lộ trình của bạn</h2>
+                <button id="backToSetupFromPath" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+            </div>
+            <div id="learningPathContainer" class="space-y-3 pr-2">
+                <!-- Lộ trình sẽ được render ở đây -->
+            </div>
+        </div>
+        
+        <!-- Màn hình Chọn mục tiêu -->
+        <div id="goal-setting-view" class="view">
+            <h2 class="text-3xl font-bold text-slate-800 mb-2 text-center">Mục tiêu của bạn là gì?</h2>
+            <p class="text-slate-500 text-lg mb-8 text-center">Chọn một mục tiêu để AI cá nhân hóa lộ trình tốt hơn.</p>
+            <div id="goalOptionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Các mục tiêu sẽ được render ở đây -->
+            </div>
+        </div>
+
+        <!-- Màn hình Thư viện bài tập -->
+        <div id="library-view" class="view">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-3xl font-bold text-amber-600">Thư viện bài tập</h2><button id="backToSetupFromLibrary" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button></div>
+            <div id="libraryFilters" class="mb-4 flex flex-col md:flex-row gap-4"></div>
+            <div id="libraryList" class="space-y-3"></div>
+        </div>
+
+        <!-- Màn hình Lịch sử làm bài -->
+        <div id="history-view" class="view">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-3xl font-bold text-indigo-600">Lịch sử & Phân tích</h2><button id="backToSetupFromHistory" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button></div>
+            <div id="historyDashboard" class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-center"></div>
+            <div id="recommendationsContainer" class="mb-4"></div>
+            <div id="historyFilters" class="mb-4 flex flex-col md:flex-row gap-4">
+                <select id="filterSkill" class="w-full md:w-1/2 p-2 border border-slate-300 rounded-lg bg-white"><option value="all">Tất cả Kỹ năng</option><option value="vocabulary">Từ vựng</option><option value="reading">Đọc hiểu</option><option value="grammar">Ngữ pháp</option><option value="listening">Nghe hiểu</option><option value="writing">Luyện viết</option></select>
+                <select id="filterLevel" class="w-full md:w-1/2 p-2 border border-slate-300 rounded-lg bg-white"><option value="all">Tất cả Trình độ</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option></select>
+            </div>
+            <div id="historyList" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
+        </div>
+
+        <!-- Màn hình Sổ tay Từ vựng -->
+        <div id="notebook-view" class="view">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-teal-600">Sổ tay Từ vựng</h2>
+                <button id="backToSetupFromNotebook" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+            </div>
+            <div id="notebookList" class="space-y-3"></div>
+        </div>
+
+        <!-- Màn hình Đang tải câu hỏi -->
+        <div id="loading-view" class="view text-center py-16">
+            <div class="spinner mx-auto mb-6"></div><h2 id="loadingTitle" class="text-2xl font-semibold text-slate-700">Đang tạo bài kiểm tra...</h2><p id="loadingMessage" class="text-slate-500">AI đang chuẩn bị các câu hỏi về chủ đề <b id="loadingTopic"></b> cho bạn. Vui lòng chờ!</p>
+        </div>
+
+        <!-- Màn hình Làm bài kiểm tra -->
+        <div id="quiz-view" class="view">
+            <div id="quizHeader" class="text-center mb-6 border-b pb-4">
+                <h2 id="quizTitle" class="text-2xl font-bold text-sky-700"></h2>
+                <p id="quizSubtitle" class="text-slate-500 mt-1"></p>
+            </div>
+            <div class="flex justify-between items-center mb-4"><div id="progress" class="text-lg font-semibold text-slate-600">Câu 1 / 5</div><div id="score" class="text-lg font-bold text-sky-600">Điểm: 0</div></div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 mb-8"><div id="progressBar" class="bg-sky-500 h-2.5 rounded-full" style="width: 20%"></div></div>
+            <div id="audioPlayerContainer" class="hidden mb-2 p-4 bg-slate-800 text-white rounded-lg flex items-center justify-center space-x-4">
+                <button id="playAudioBtn" class="p-3 bg-sky-500 rounded-full hover:bg-sky-600 disabled:bg-slate-500 disabled:cursor-not-allowed">
+                    <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                </button>
+                <div id="audioStatus" class="text-sm">Nhấn để nghe</div>
+            </div>
+            <div id="transcriptControls" class="hidden mb-4 text-center">
+                <button id="showTranscriptBtn" class="text-sm text-sky-600 hover:underline">Hiện lời thoại</button>
+            </div>
+            <div id="transcriptContainer" class="hidden mb-6 p-3 bg-slate-100 rounded-lg text-slate-700 text-lg leading-relaxed"></div>
+            <div id="passageContainer" class="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200 hidden"><p id="passageText"></p></div>
+            <div id="questionContainer" class="mb-6"><p class="text-xl md:text-2xl font-semibold leading-relaxed mb-6"><span id="questionText"></span><span id="translateQuestionBtn" class="translate-icon" title="Dịch câu hỏi này">🌐</span></p><div id="optionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div></div>
+            <div id="feedbackContainer" class="mt-6 p-4 rounded-lg min-h-[100px]"></div>
+            <button id="nextQuestionButton" class="hidden mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition">Tiếp tục</button>
+        </div>
+
+        <!-- Màn hình Luyện Viết -->
+        <div id="writing-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-cyan-600">Luyện Viết</h2>
+                <button id="backToSetupFromWriting" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-700 mb-2">Chủ đề:</h3>
+                    <p id="writingTopic" class="text-xl p-4 bg-slate-100 rounded-lg border border-slate-200"></p>
+                </div>
+                <div>
+                    <label for="writingInput" class="block text-lg font-semibold mb-2 text-slate-700">Bài viết của bạn (ít nhất 30 từ):</label>
+                    <textarea id="writingInput" rows="8" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Viết bài của bạn ở đây..."></textarea>
+                    <p id="wordCount" class="text-sm text-right text-slate-500 mt-1">0 từ</p>
+                </div>
+                <button id="getFeedbackButton" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-center gap-3 disabled:bg-cyan-300">
+                    <span class="btn-text">Nhận phản hồi từ AI</span>
+                    <div class="spinner btn-spinner hidden"></div>
+                </button>
+            </div>
+            <div id="writingFeedbackContainer" class="mt-8 space-y-6 hidden"></div>
+        </div>
+
+
+        <!-- Màn hình Kết quả -->
+        <div id="result-view" class="view text-center">
+            <h2 class="text-3xl font-bold text-slate-800 mb-2">Hoàn thành!</h2><p class="text-slate-500 text-lg mb-6">Đây là kết quả của bạn:</p>
+            <div id="resultScoreContainer" class="bg-sky-100 border-2 border-sky-300 rounded-xl p-8 mb-8"><p class="text-2xl font-semibold mb-2">Tổng điểm</p><p id="finalScore" class="text-6xl font-bold text-sky-600">4 / 5</p></div>
+            <p id="resultMessage" class="text-lg mb-8"></p>
+            <div class="flex space-x-4">
+                <button id="playAgainButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 px-4 rounded-lg text-xl transition">Làm lại</button>
+                <button id="reviewAnswersButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-4 rounded-lg text-xl transition">Xem lại bài làm</button>
+            </div>
+            <button id="viewHistoryFromResultButton" class="mt-4 w-full text-indigo-600 hover:text-indigo-800 font-semibold py-2 px-4 rounded-lg text-md transition">Xem lịch sử & phân tích</button>
+        </div>
+        
+        <!-- Màn hình Xem lại bài làm -->
+        <div id="review-view" class="view">
+             <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-purple-600">Xem lại bài làm</h2>
+                <button id="backToPreviousViewButton" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+            </div>
+            <div id="reviewList" class="space-y-4"></div>
+        </div>
+        
+        <!-- Màn hình Ôn tập & Củng cố -->
+        <div id="reinforcement-view" class="view">
+             <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-orange-600">Ôn tập & Củng cố</h2>
+                <button id="backToPathFromReinforcement" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Về Lộ trình</button>
+            </div>
+            <p class="text-slate-600 mb-4">Đây là những câu bạn đã làm sai. Hãy xem lại và nhấn vào nút "Bài học từ AI" để hiểu rõ hơn trước khi thử lại nhé.</p>
+            <div id="reinforcementReviewList" class="space-y-4"></div>
+             <button id="retryPathStepFromReinforcement" class="mt-6 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition">Thử lại bước này</button>
+        </div>
+        
+        <!-- Màn hình Kết quả Kiểm tra Trình độ -->
+        <div id="placement-result-view" class="view text-center">
+            <h2 class="text-3xl font-bold text-slate-800 mb-2">Kết quả Kiểm tra Trình độ</h2>
+            <p class="text-slate-500 text-lg mb-6">Đây là phân tích của AI về năng lực của bạn:</p>
+            <div id="placementResultContainer" class="bg-indigo-100 border-2 border-indigo-300 rounded-xl p-8 mb-8 text-left">
+                <div class="spinner mx-auto"></div>
+            </div>
+            <div id="diagnosticChartContainer" class="hidden my-6"><canvas id="diagnosticChart"></canvas></div>
+            <button id="createPathButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 px-4 rounded-lg text-xl transition hidden">Tạo Lộ trình Học tập cho tôi</button>
+            <button id="backToSetupFromPlacement" class="mt-4 w-full text-slate-600 hover:text-slate-800 font-semibold py-2 px-4 rounded-lg text-md transition">Quay lại sau</button>
+        </div>
+
+        <!-- Thông báo lỗi chung -->
+        <div id="error-view" class="view text-center text-red-600 bg-red-100 p-6 rounded-lg">
+             <h2 class="text-2xl font-bold mb-4">Đã xảy ra lỗi</h2><p id="errorMessage" class="mb-6"></p><button id="backToSetupButton" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg">Quay lại</button>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div id="translationModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Bản dịch</h3>
+            <div id="translationResult" class="bg-slate-100 p-4 rounded-lg min-h-[80px]">
+                <div class="spinner mx-auto"></div>
+            </div>
+            <button id="closeTranslationModal" class="mt-6 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Đóng</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="confirmTitle" class="text-xl font-bold text-slate-800 mb-2">Xác nhận</h3>
+            <p id="confirmMessage" class="text-slate-600 mb-6">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirmCancelBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-5 rounded-lg">Hủy</button>
+                <button id="confirmOkBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-5 rounded-lg">Xóa</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="vocabModal" class="modal-overlay">
+        <div class="modal-content !p-0">
+            <div class="flex justify-between items-center p-6 border-b border-slate-200">
+                <h3 class="text-xl font-bold text-slate-800">Từ vựng liên quan</h3>
+                <button id="closeVocabModal" class="text-2xl font-bold text-slate-400 hover:text-red-500">&times;</button>
+            </div>
+            <div id="vocabList" class="space-y-0 max-h-80 overflow-y-auto p-6"></div>
+        </div>
+    </div>
+
+    <div id="reinforceModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center pb-4 border-b mb-4">
+                <h3 id="reinforceTitle" class="text-2xl font-bold text-fuchsia-600">Bài học từ AI</h3>
+                <button id="closeReinforceModal" class="text-2xl font-bold text-slate-400 hover:text-red-500">&times;</button>
+            </div>
+            <div id="reinforceContent" class="space-y-4">
+                <div class="spinner mx-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW/UPDATED: Word Info Modal -->
+    <div id="wordInfoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center pb-4 border-b mb-4">
+                <div id="wordInfoTitleContainer" class="flex items-center gap-3">
+                    <h3 id="wordInfoTitle" class="text-2xl font-bold text-sky-600 capitalize"></h3>
+                    <button id="wordInfoSpeakBtn" class="speak-btn">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-500 hover:text-sky-700"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    </button>
+                </div>
+                <button id="closeWordInfoModal" class="text-2xl font-bold text-slate-400 hover:text-red-500">&times;</button>
+            </div>
+            <div id="wordInfoContent" class="space-y-4 min-h-[100px]">
+                <div class="spinner mx-auto"></div>
+            </div>
+            <button id="saveWordFromInfoBtn" class="mt-6 w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-teal-300 disabled:cursor-not-allowed">Lưu vào sổ tay</button>
+        </div>
+    </div>
+
+    <!-- Liên kết với file JavaScript -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
