@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics.js";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-ai.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, getDocs, serverTimestamp, doc, getDoc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp, doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 // --- FIREBASE CONFIG ---
 const firebaseConfig = {
@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -34,7 +34,7 @@ try {
 
 // DOM Elements
 const appContainer = document.getElementById('appContainer');
-const welcomeMessage = document.getElementById('welcomeMessage'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginButton = document.getElementById('loginButton'), registerButton = document.getElementById('registerButton'), logoutButton = document.getElementById('logoutButton'), authError = document.getElementById('authError'), quizTypeSelect = document.getElementById('quizTypeSelect'), vocabModeContainer = document.getElementById('vocabModeContainer'), vocabModeSelect = document.getElementById('vocabModeSelect'), topicContainer = document.getElementById('topicContainer'), topicSelect = document.getElementById('topicSelect'), levelSelect = document.getElementById('levelSelect'), questionCountContainer = document.getElementById('questionCountContainer'), questionCountSelect = document.getElementById('questionCountSelect'), startQuizButton = document.getElementById('startQuizButton'), showHistoryButton = document.getElementById('showHistoryButton'), showNotebookButton = document.getElementById('showNotebookButton'), showLibraryButton = document.getElementById('showLibraryButton'), libraryList = document.getElementById('libraryList'), backToSetupFromLibrary = document.getElementById('backToSetupFromLibrary'), notebookList = document.getElementById('notebookList'), backToSetupFromNotebook = document.getElementById('backToSetupFromNotebook'), historyDashboard = document.getElementById('historyDashboard'), recommendationsContainer = document.getElementById('recommendationsContainer'), historyFilters = document.getElementById('historyFilters'), filterSkill = document.getElementById('filterSkill'), filterLevel = document.getElementById('filterLevel'), historyList = document.getElementById('historyList'), backToSetupFromHistory = document.getElementById('backToSetupFromHistory'), loadingTopic = document.getElementById('loadingTopic'), loadingTitle = document.getElementById('loadingTitle'), loadingMessage = document.getElementById('loadingMessage'), quizTitle = document.getElementById('quizTitle'), quizSubtitle = document.getElementById('quizSubtitle'), progress = document.getElementById('progress'), scoreEl = document.getElementById('score'), progressBar = document.getElementById('progressBar'), audioPlayerContainer = document.getElementById('audioPlayerContainer'), playAudioBtn = document.getElementById('playAudioBtn'), playIcon = document.getElementById('playIcon'), pauseIcon = document.getElementById('pauseIcon'), audioStatus = document.getElementById('audioStatus'), transcriptControls = document.getElementById('transcriptControls'), showTranscriptBtn = document.getElementById('showTranscriptBtn'), transcriptContainer = document.getElementById('transcriptContainer'), passageContainer = document.getElementById('passageContainer'), passageText = document.getElementById('passageText'), questionContainer = document.getElementById('questionContainer'), questionText = document.getElementById('questionText'), translateQuestionBtn = document.getElementById('translateQuestionBtn'), optionsContainer = document.getElementById('optionsContainer'), feedbackContainer = document.getElementById('feedbackContainer'), nextQuestionButton = document.getElementById('nextQuestionButton'), playAgainButton = document.getElementById('playAgainButton'), reviewAnswersButton = document.getElementById('reviewAnswersButton'), reviewList = document.getElementById('reviewList'), backToPreviousViewButton = document.getElementById('backToPreviousViewButton'), viewHistoryFromResultButton = document.getElementById('viewHistoryFromResultButton'), finalScore = document.getElementById('finalScore'), resultMessage = document.getElementById('resultMessage'), resultScoreContainer = document.getElementById('resultScoreContainer'), errorMessage = document.getElementById('errorMessage'), backToSetupButton = document.getElementById('backToSetupButton'), streakCount = document.getElementById('streakCount'), translationModal = document.getElementById('translationModal'), translationResult = document.getElementById('translationResult'), closeTranslationModal = document.getElementById('closeTranslationModal'), confirmModal = document.getElementById('confirmModal'), confirmTitle = document.getElementById('confirmTitle'), confirmMessage = document.getElementById('confirmMessage'), confirmCancelBtn = document.getElementById('confirmCancelBtn'), confirmOkBtn = document.getElementById('confirmOkBtn'), vocabModal = document.getElementById('vocabModal'), vocabList = document.getElementById('vocabList'), closeVocabModal = document.getElementById('closeVocabModal');
+const welcomeMessage = document.getElementById('welcomeMessage'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginButton = document.getElementById('loginButton'), registerButton = document.getElementById('registerButton'), logoutButton = document.getElementById('logoutButton'), authError = document.getElementById('authError'), quizTypeSelect = document.getElementById('quizTypeSelect'), vocabModeContainer = document.getElementById('vocabModeContainer'), vocabModeSelect = document.getElementById('vocabModeSelect'), topicContainer = document.getElementById('topicContainer'), topicSelect = document.getElementById('topicSelect'), levelSelect = document.getElementById('levelSelect'), questionCountContainer = document.getElementById('questionCountContainer'), questionCountSelect = document.getElementById('questionCountSelect'), startQuizButton = document.getElementById('startQuizButton'), showHistoryButton = document.getElementById('showHistoryButton'), showNotebookButton = document.getElementById('showNotebookButton'), showLibraryButton = document.getElementById('showLibraryButton'), libraryList = document.getElementById('libraryList'), backToSetupFromLibrary = document.getElementById('backToSetupFromLibrary'), historyDashboard = document.getElementById('historyDashboard'), recommendationsContainer = document.getElementById('recommendationsContainer'), historyFilters = document.getElementById('historyFilters'), filterSkill = document.getElementById('filterSkill'), filterLevel = document.getElementById('filterLevel'), historyList = document.getElementById('historyList'), backToSetupFromHistory = document.getElementById('backToSetupFromHistory'), loadingTopic = document.getElementById('loadingTopic'), loadingTitle = document.getElementById('loadingTitle'), loadingMessage = document.getElementById('loadingMessage'), quizTitle = document.getElementById('quizTitle'), quizSubtitle = document.getElementById('quizSubtitle'), progress = document.getElementById('progress'), scoreEl = document.getElementById('score'), progressBar = document.getElementById('progressBar'), audioPlayerContainer = document.getElementById('audioPlayerContainer'), playAudioBtn = document.getElementById('playAudioBtn'), playIcon = document.getElementById('playIcon'), pauseIcon = document.getElementById('pauseIcon'), audioStatus = document.getElementById('audioStatus'), transcriptControls = document.getElementById('transcriptControls'), showTranscriptBtn = document.getElementById('showTranscriptBtn'), transcriptContainer = document.getElementById('transcriptContainer'), passageContainer = document.getElementById('passageContainer'), passageText = document.getElementById('passageText'), questionContainer = document.getElementById('questionContainer'), questionText = document.getElementById('questionText'), translateQuestionBtn = document.getElementById('translateQuestionBtn'), optionsContainer = document.getElementById('optionsContainer'), feedbackContainer = document.getElementById('feedbackContainer'), nextQuestionButton = document.getElementById('nextQuestionButton'), playAgainButton = document.getElementById('playAgainButton'), reviewAnswersButton = document.getElementById('reviewAnswersButton'), reviewList = document.getElementById('reviewList'), backToPreviousViewButton = document.getElementById('backToPreviousViewButton'), viewHistoryFromResultButton = document.getElementById('viewHistoryFromResultButton'), finalScore = document.getElementById('finalScore'), resultMessage = document.getElementById('resultMessage'), resultScoreContainer = document.getElementById('resultScoreContainer'), errorMessage = document.getElementById('errorMessage'), backToSetupButton = document.getElementById('backToSetupButton'), streakCount = document.getElementById('streakCount'), translationModal = document.getElementById('translationModal'), translationResult = document.getElementById('translationResult'), closeTranslationModal = document.getElementById('closeTranslationModal'), confirmModal = document.getElementById('confirmModal'), confirmTitle = document.getElementById('confirmTitle'), confirmMessage = document.getElementById('confirmMessage'), confirmCancelBtn = document.getElementById('confirmCancelBtn'), confirmOkBtn = document.getElementById('confirmOkBtn'), vocabModal = document.getElementById('vocabModal'), vocabList = document.getElementById('vocabList'), closeVocabModal = document.getElementById('closeVocabModal');
 const backToSetupFromWriting = document.getElementById('backToSetupFromWriting'), writingTopic = document.getElementById('writingTopic'), writingInput = document.getElementById('writingInput'), wordCount = document.getElementById('wordCount'), getFeedbackButton = document.getElementById('getFeedbackButton'), writingFeedbackContainer = document.getElementById('writingFeedbackContainer');
 const reinforceModal = document.getElementById('reinforceModal'), reinforceTitle = document.getElementById('reinforceTitle'), reinforceContent = document.getElementById('reinforceContent'), closeReinforceModal = document.getElementById('closeReinforceModal');
 const quickStartButton = document.getElementById('quickStartButton');
@@ -66,13 +66,37 @@ const diagnosticChartContainer = document.getElementById('diagnosticChartContain
 const diagnosticChartCanvas = document.getElementById('diagnosticChart');
 const customTopicContainer = document.getElementById('customTopicContainer');
 const customTopicInput = document.getElementById('customTopicInput');
-// NEW/UPDATED: Word Info Modal Elements
 const wordInfoModal = document.getElementById('wordInfoModal');
 const wordInfoTitle = document.getElementById('wordInfoTitle');
 const wordInfoSpeakBtn = document.getElementById('wordInfoSpeakBtn');
 const wordInfoContent = document.getElementById('wordInfoContent');
 const saveWordFromInfoBtn = document.getElementById('saveWordFromInfoBtn');
 const closeWordInfoModal = document.getElementById('closeWordInfoModal');
+
+// NOTEBOOK V4 DOM Elements
+const backToSetupFromNotebook = document.getElementById('backToSetupFromNotebook');
+const createNewDeckButton = document.getElementById('createNewDeckButton');
+const deckList = document.getElementById('deckList');
+const deckDetailsView = document.getElementById('deck-details-view');
+const deckNameTitle = document.getElementById('deckNameTitle');
+const backToDecksView = document.getElementById('backToDecksView');
+const quickLookupInput = document.getElementById('quickLookupInput');
+const quickLookupButton = document.getElementById('quickLookupButton');
+const quickLookupResult = document.getElementById('quickLookupResult');
+const deckSearchInput = document.getElementById('deckSearchInput');
+const deckWordList = document.getElementById('deckWordList');
+const selectAllWordsCheckbox = document.getElementById('selectAllWordsCheckbox');
+const deckPagination = document.getElementById('deckPagination');
+const reviewSelectedWordsButton = document.getElementById('reviewSelectedWordsButton');
+const inputModal = document.getElementById('inputModal');
+const inputTitle = document.getElementById('inputTitle');
+const inputLabel = document.getElementById('inputLabel');
+const inputField = document.getElementById('inputField');
+const inputError = document.getElementById('inputError');
+const inputCancelBtn = document.getElementById('inputCancelBtn');
+const inputOkBtn = document.getElementById('inputOkBtn');
+const deckSelectionContainer = document.getElementById('deckSelectionContainer');
+const deckSelectDropdown = document.getElementById('deckSelectDropdown');
 
 
 // App State
@@ -89,7 +113,8 @@ let currentUserPath = null;
 let diagnosticConversationState = {};
 let recognition;
 let chartInstance;
-let notebookWords = new Set(); // NEW: To track all saved words for highlighting
+let notebookWords = new Set(); // Used for global highlighting of saved words
+let currentDeckId = null; // NOTEBOOK V4: Track the current deck being viewed
 
 // --- Audio State & Setup ---
 const synth = window.speechSynthesis;
@@ -143,7 +168,8 @@ function hideModal(modalElement) {
     modalElement.classList.remove('active');
 }
 
-function showConfirmModal(message, onConfirm) {
+function showConfirmModal(title, message, onConfirm) {
+    confirmTitle.textContent = title;
     confirmMessage.textContent = message;
     showModal(confirmModal);
 
@@ -152,12 +178,38 @@ function showConfirmModal(message, onConfirm) {
         onConfirm();
         hideModal(confirmModal);
         confirmOkBtn.removeEventListener('click', handleConfirm);
-        confirmCancelBtn.removeEventListener('click', hideConfirmModal);
+        confirmCancelBtn.removeEventListener('click', () => hideModal(confirmModal));
+    };
+    
+    confirmOkBtn.onclick = handleConfirm;
+    confirmCancelBtn.onclick = () => hideModal(confirmModal);
+}
+
+function showInputModal(title, label, placeholder, onConfirm) {
+    inputTitle.textContent = title;
+    inputLabel.textContent = label;
+    inputField.placeholder = placeholder;
+    inputField.value = '';
+    inputError.textContent = '';
+    showModal(inputModal);
+    inputField.focus();
+
+    const handleConfirm = () => {
+        const value = inputField.value.trim();
+        if (!value) {
+            inputError.textContent = 'Vui lòng không để trống.';
+            return;
+        }
+        playSound('click');
+        onConfirm(value);
+        hideModal(inputModal);
     };
 
-    confirmCancelBtn.addEventListener('click', () => hideModal(confirmModal), { once: true });
-    confirmOkBtn.addEventListener('click', handleConfirm, { once: true });
+    inputOkBtn.onclick = handleConfirm;
+    inputField.onkeydown = (e) => { if (e.key === 'Enter') handleConfirm(); };
+    inputCancelBtn.onclick = () => hideModal(inputModal);
 }
+
 
 // --- Auth & User State ---
 async function fetchUserNotebook() {
@@ -172,7 +224,7 @@ onAuthStateChanged(auth, async (user) => {
         welcomeMessage.textContent = `Chào mừng, ${user.email}!`; 
         await updateUserStreak(user.uid); 
         await checkUserLearningPath(user.uid);
-        await fetchUserNotebook(); // Fetch notebook on login
+        await fetchUserNotebook(); // Fetch all words for global highlighting
         showView('setup-view'); 
     } else { 
         showView('auth-view'); 
@@ -300,7 +352,6 @@ function showTranslationModal(textPromise) {
 }
 
 // --- PROMPTS ---
-// UPDATED PROMPT
 function getWordInfoPrompt(word) {
     return `Provide a simple Vietnamese definition, a simple English example sentence, and the IPA transcription for the word "${word}". You MUST wrap your entire response in a 'json' markdown code block.
     Example:
@@ -313,113 +364,10 @@ function getWordInfoPrompt(word) {
     \`\`\``;
 }
 // Other prompts remain the same...
-function getPlacementTestPrompt() {
-    return `You are an expert English assessment creator. Create a comprehensive placement test with exactly 12 multiple-choice questions to determine a user's CEFR level (from A2 to B2).
-    The test MUST include:
-    - 4 Grammar questions, with increasing difficulty (A2, B1, B1, B2).
-    - 4 Vocabulary questions, with increasing difficulty (A2, B1, B1, B2) covering common topics.
-    - 1 short reading passage (around 80-100 words, at a B1 level).
-    - 4 multiple-choice questions based on the reading passage.
-
-    For each question, provide one correct answer and three plausible distractors. The "answer" field MUST be the full text of the correct option.
-    You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON object with a "passage" key (which can be an empty string for non-reading questions) and a "questions" key containing an array of 12 question objects.
-    Example structure:
-    \`\`\`json
-    {
-      "passage": "...",
-      "questions": [
-        { "question": "...", "options": ["..."], "answer": "..." },
-        { "question": "...", "options": ["..."], "answer": "..." }
-      ]
-    }
-    \`\`\``;
-}
-
-function getPlacementAnalysisPrompt(results) {
-    const userAnswers = results.map(r => ({ question: r.question.question, userAnswer: r.userAnswer, correctAnswer: r.question.answer }));
-    return `An English learner has just completed a placement test. Here are their results: ${JSON.stringify(userAnswers)}.
-    Based on these answers, please perform the following tasks:
-    1.  Determine the user's approximate CEFR level (e.g., "A2", "B1", "B2").
-    2.  Write a short, friendly analysis (2-3 sentences in Vietnamese) of their performance, highlighting one strength and one area for improvement.
-    
-    You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON object with "level" and "analysis" keys.
-    Example:
-    \`\`\`json
-    {
-      "level": "B1",
-      "analysis": "Bạn có nền tảng ngữ pháp khá tốt và xử lý tốt các câu hỏi ở trình độ A2. Tuy nhiên, bạn cần cải thiện thêm vốn từ vựng ở các chủ đề chuyên sâu hơn để đạt trình độ B2."
-    }
-    \`\`\``;
-}
-
-function getLearningPathPrompt(placementResult, goal) {
-    return `An English learner has the following profile:
-    - CEFR Level determined by placement test: ${placementResult.level}
-    - Placement test analysis: "${placementResult.analysis}"
-    - Stated learning goal: "${goal}"
-
-    Based on this profile, create a personalized learning path consisting of 10-15 sequential steps. Each step should be a specific, actionable learning unit.
-    For each step, define its "type" ('vocabulary', 'grammar', 'reading', 'listening', 'writing', or 'review'), a "topic", a "level" (CEFR), and a short "description" in Vietnamese.
-    The path should start with foundational topics based on the user's weaknesses and progressively build up towards their goal. Include 'review' steps periodically to reinforce learning.
-
-    You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON array of step objects.
-    Example:
-    \`\`\`json
-    [
-      {
-        "type": "grammar",
-        "topic": "Present Perfect Tense",
-        "level": "B1",
-        "description": "Ôn tập cách dùng thì Hiện tại Hoàn thành"
-      },
-      {
-        "type": "vocabulary",
-        "topic": "Work & Business",
-        "level": "B1",
-        "description": "Học 10 từ vựng cốt lõi về chủ đề Công việc"
-      },
-      {
-        "type": "review",
-        "topic": "Mixed",
-        "level": "B1",
-        "description": "Làm bài quiz ngắn ôn tập kiến thức vừa học"
-      }
-    ]
-    \`\`\``;
-}
-
-function getDiagnosticAnalysisPrompt(conversationData) {
-    const dataString = JSON.stringify(conversationData, null, 2);
-    return `You are a master English language assessor AI. A user has just completed a diagnostic conversation. Here is the transcript and data collected:
-    \`\`\`json
-    ${dataString}
-    \`\`\`
-    Based on ALL the provided data, perform a holistic analysis. Your response MUST be a JSON object wrapped in a 'json' markdown code block with the following structure:
-    1.  "overallLevel": A string representing the user's overall CEFR level (e.g., "A2", "B1", "B2").
-    2.  "skillsProfile": An object with scores from 0 to 100 for the following five skills:
-        - "pronunciation": Assess based on the clarity and accuracy of their spoken responses.
-        - "fluency": Assess the smoothness and speed of their speech.
-        - "listening": Assess their ability to understand the AI's spoken questions.
-        - "vocabulary": Assess the range and appropriateness of words used in both spoken and written tasks.
-        - "grammar": Assess the grammatical accuracy of their spoken and written sentences.
-    3.  "analysis": A detailed, friendly analysis in VIETNAMESE (3-4 sentences). Start by stating their overall level, then highlight their main strength and pinpoint their biggest area for improvement, giving a specific example from the conversation if possible.
-    
-    Example of the required JSON output:
-    \`\`\`json
-    {
-      "overallLevel": "B1",
-      "skillsProfile": {
-        "pronunciation": 75,
-        "fluency": 60,
-        "listening": 80,
-        "vocabulary": 65,
-        "grammar": 70
-      },
-      "analysis": "Trình độ của bạn ở khoảng B1. Bạn có khả năng nghe hiểu tốt và phát âm khá rõ ràng. Tuy nhiên, bạn cần cải thiện sự trôi chảy khi nói và mở rộng vốn từ vựng, ví dụ như trong phần mô tả bức tranh, bạn có thể dùng các tính từ đa dạng hơn."
-    }
-    \`\`\``;
-}
-
+function getPlacementTestPrompt() { return `You are an expert English assessment creator. Create a comprehensive placement test with exactly 12 multiple-choice questions to determine a user's CEFR level (from A2 to B2). The test MUST include: - 4 Grammar questions, with increasing difficulty (A2, B1, B1, B2). - 4 Vocabulary questions, with increasing difficulty (A2, B1, B1, B2) covering common topics. - 1 short reading passage (around 80-100 words, at a B1 level). - 4 multiple-choice questions based on the reading passage. For each question, provide one correct answer and three plausible distractors. The "answer" field MUST be the full text of the correct option. You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON object with a "passage" key (which can be an empty string for non-reading questions) and a "questions" key containing an array of 12 question objects. Example structure: \`\`\`json { "passage": "...", "questions": [ { "question": "...", "options": ["..."], "answer": "..." }, { "question": "...", "options": ["..."], "answer": "..." } ] } \`\`\``; }
+function getPlacementAnalysisPrompt(results) { const userAnswers = results.map(r => ({ question: r.question.question, userAnswer: r.userAnswer, correctAnswer: r.question.answer })); return `An English learner has just completed a placement test. Here are their results: ${JSON.stringify(userAnswers)}. Based on these answers, please perform the following tasks: 1.  Determine the user's approximate CEFR level (e.g., "A2", "B1", "B2"). 2.  Write a short, friendly analysis (2-3 sentences in Vietnamese) of their performance, highlighting one strength and one area for improvement. You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON object with "level" and "analysis" keys. Example: \`\`\`json { "level": "B1", "analysis": "Bạn có nền tảng ngữ pháp khá tốt và xử lý tốt các câu hỏi ở trình độ A2. Tuy nhiên, bạn cần cải thiện thêm vốn từ vựng ở các chủ đề chuyên sâu hơn để đạt trình độ B2." } \`\`\``; }
+function getLearningPathPrompt(placementResult, goal) { return `An English learner has the following profile: - CEFR Level determined by placement test: ${placementResult.level} - Placement test analysis: "${placementResult.analysis}" - Stated learning goal: "${goal}" Based on this profile, create a personalized learning path consisting of 10-15 sequential steps. Each step should be a specific, actionable learning unit. For each step, define its "type" ('vocabulary', 'grammar', 'reading', 'listening', 'writing', or 'review'), a "topic", a "level" (CEFR), and a short "description" in Vietnamese. The path should start with foundational topics based on the user's weaknesses and progressively build up towards their goal. Include 'review' steps periodically to reinforce learning. You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON array of step objects. Example: \`\`\`json [ { "type": "grammar", "topic": "Present Perfect Tense", "level": "B1", "description": "Ôn tập cách dùng thì Hiện tại Hoàn thành" }, { "type": "vocabulary", "topic": "Work & Business", "level": "B1", "description": "Học 10 từ vựng cốt lõi về chủ đề Công việc" }, { "type": "review", "topic": "Mixed", "level": "B1", "description": "Làm bài quiz ngắn ôn tập kiến thức vừa học" } ] \`\`\``; }
+function getDiagnosticAnalysisPrompt(conversationData) { const dataString = JSON.stringify(conversationData, null, 2); return `You are a master English language assessor AI. A user has just completed a diagnostic conversation. Here is the transcript and data collected: \`\`\`json ${dataString} \`\`\` Based on ALL the provided data, perform a holistic analysis. Your response MUST be a JSON object wrapped in a 'json' markdown code block with the following structure: 1.  "overallLevel": A string representing the user's overall CEFR level (e.g., "A2", "B1", "B2"). 2.  "skillsProfile": An object with scores from 0 to 100 for the following five skills: - "pronunciation": Assess based on the clarity and accuracy of their spoken responses. - "fluency": Assess the smoothness and speed of their speech. - "listening": Assess their ability to understand the AI's spoken questions. - "vocabulary": Assess the range and appropriateness of words used in both spoken and written tasks. - "grammar": Assess the grammatical accuracy of their spoken and written sentences. 3.  "analysis": A detailed, friendly analysis in VIETNAMESE (3-4 sentences). Start by stating their overall level, then highlight their main strength and pinpoint their biggest area for improvement, giving a specific example from the conversation if possible. Example of the required JSON output: \`\`\`json { "overallLevel": "B1", "skillsProfile": { "pronunciation": 75, "fluency": 60, "listening": 80, "vocabulary": 65, "grammar": 70 }, "analysis": "Trình độ của bạn ở khoảng B1. Bạn có khả năng nghe hiểu tốt và phát âm khá rõ ràng. Tuy nhiên, bạn cần cải thiện sự trôi chảy khi nói và mở rộng vốn từ vựng, ví dụ như trong phần mô tả bức tranh, bạn có thể dùng các tính từ đa dạng hơn." } \`\`\``; }
 function getFlashcardPrompt(level, topic, count) { return `You are an expert English teacher. Generate ${count} flashcards for an English learner at the ${level} CEFR level. The topic is "${topic}". For each card, provide the English "word", its IPA transcription in the "ipa" field, its Vietnamese "meaning", and an "example" sentence in English using the word. You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON array of objects: \`\`\`json\n[ { "type": "flashcard", "word": "sustainable", "ipa": "/səˈsteɪnəbl/", "meaning": "bền vững", "example": "We need to find more sustainable sources of energy." } ]\n\`\`\``; }
 function getMatchingPrompt(level, topic, pairCount) { return `You are an expert English teacher. Generate a single 'matching' game question for an English learner at the ${level} CEFR level. The topic is "${topic}". The question object must have a "type" of "matching" and a "pairs" array containing ${pairCount} objects. Each object in the "pairs" array must have an English "word" and its Vietnamese "meaning". You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON object inside a single-element array: \`\`\`json\n[ { "type": "matching", "pairs": [ { "word": "computer", "meaning": "máy vi tính" }, { "word": "keyboard", "meaning": "bàn phím" } ] } ]\n\`\`\``; }
 function getWordScramblePrompt(level, topic, count) { return `You are an expert English teacher. Generate ${count} 'word scramble' questions for an English learner at the ${level} CEFR level. The topic is "${topic}". For each question, provide a "clue" which is a helpful hint or definition IN VIETNAMESE, and the "answer" which is the single English word to be scrambled. The answer must not contain spaces. You MUST wrap your entire response in a 'json' markdown code block. The structure MUST be a valid JSON array of objects: \`\`\`json\n[ { "type": "word_scramble", "clue": "Một loại trái cây màu đỏ, thường dùng làm salad.", "answer": "tomato" } ]\n\`\`\``; }
@@ -433,7 +381,7 @@ function getWritingTopicPrompt(level, topic) { return `You are an English teache
 function getWritingFeedbackPrompt(level, topic, userText) { return `You are an expert English writing evaluator. A student at the ${level} CEFR level has written the following text about the topic "${topic}". Student's text: """ ${userText} """ Please provide feedback in Vietnamese. You MUST wrap your entire response in a 'json' markdown code block. The JSON object must have the following structure: 1. "overallFeedback": A general comment in Vietnamese (2-3 sentences) on the text's content, clarity, and effort. 2. "score": An integer score from 0 to 100. 3. "correctedTextHTML": The student's original text with corrections. Use "<del>" tags for deleted parts and "<ins>" tags for added parts. This should be a single HTML string. 4. "detailedFeedback": An array of objects, where each object explains a specific mistake. Each object should have: "type", "mistake", "correction", "explanation". Example of the required JSON output: \`\`\`json\n{ "overallFeedback": "...", "score": 75, "correctedTextHTML": "...", "detailedFeedback": [ { "type": "Grammar", "mistake": "...", "correction": "...", "explanation": "..." } ] }\n\`\`\``; }
 function getReinforcementPrompt(question, userAnswer) { const level = quizData.level; const questionText = question.question || question.clue; const options = question.options ? JSON.stringify(question.options) : 'N/A'; return `You are an expert and friendly English tutor AI. A student has made a mistake on a quiz. Your task is to provide a comprehensive, easy-to-understand lesson to help them master the concept they got wrong. The student is at the ${level} CEFR level. Quiz question: - Question: "${questionText}" - Options (if any): ${options} - Correct Answer: "${question.answer}" - Student's Incorrect Answer: "${userAnswer}" Please generate a lesson in Vietnamese. You MUST wrap your entire response in a 'json' markdown code block. The JSON object must have the following structure: 1. "conceptTitle": A short, clear title for the lesson. 2. "mistakeAnalysis": A friendly explanation of why the student's answer was incorrect. 3. "conceptExplanation": A detailed but easy-to-understand explanation of the core concept. 4. "examples": An array of at least 3 distinct objects, each with an "en" and "vi" field. 5. "practiceTip": A final, encouraging tip. Example of the required JSON output: \`\`\`json\n{ "conceptTitle": "...", "mistakeAnalysis": "...", "conceptExplanation": "...", "examples": [ { "en": "...", "vi": "..." } ], "practiceTip": "..." }\n\`\`\``; }
 
-// --- NEW: Word Lookup & Rendering ---
+// --- Word Lookup & Rendering ---
 function renderTextWithClickableWords(container, text) {
     container.innerHTML = '';
     const words = text.split(/(\s+|[.,?!;:()])/); // Split by spaces and punctuation
@@ -453,7 +401,7 @@ function renderTextWithClickableWords(container, text) {
     });
 }
 
-// UPDATED FUNCTION
+// UPDATED: showWordInfo now populates a deck dropdown
 async function showWordInfo(word) {
     const cleanedWord = word.trim().toLowerCase().replace(/[^a-z'-]/g, '');
     if (!cleanedWord) return;
@@ -463,14 +411,24 @@ async function showWordInfo(word) {
     wordInfoContent.innerHTML = '<div class="spinner mx-auto"></div>';
     saveWordFromInfoBtn.disabled = true;
     wordInfoSpeakBtn.onclick = () => playSpeech(cleanedWord);
-
-
-    const isSaved = notebookWords.has(cleanedWord);
-    if (isSaved) {
-        saveWordFromInfoBtn.textContent = 'Đã lưu trong sổ tay';
-    } else {
+    
+    // Fetch user's decks and populate dropdown
+    const decks = await getDecks();
+    deckSelectDropdown.innerHTML = '';
+    if (decks.length > 0) {
+        decks.forEach(deck => {
+            const option = document.createElement('option');
+            option.value = deck.id;
+            option.textContent = deck.name;
+            deckSelectDropdown.appendChild(option);
+        });
+        deckSelectionContainer.classList.remove('hidden');
         saveWordFromInfoBtn.textContent = 'Lưu vào sổ tay';
         saveWordFromInfoBtn.disabled = false;
+    } else {
+        deckSelectionContainer.classList.add('hidden');
+        saveWordFromInfoBtn.textContent = 'Tạo bộ thẻ để lưu từ';
+        saveWordFromInfoBtn.disabled = true;
     }
 
     try {
@@ -480,9 +438,7 @@ async function showWordInfo(word) {
         const rawText = response.text();
         const wordInfo = extractAndParseJson(rawText);
 
-        // FIX: Add robust validation for the AI's response
         if (!wordInfo || typeof wordInfo.definition !== 'string' || typeof wordInfo.example !== 'string' || typeof wordInfo.ipa !== 'string') {
-            console.error("Invalid format from AI for word:", cleanedWord, "Raw Response:", rawText);
             throw new Error("AI did not return the expected format.");
         }
 
@@ -492,21 +448,12 @@ async function showWordInfo(word) {
             <p class="mt-2"><b class="font-semibold text-slate-700">Ví dụ:</b> <i class="text-slate-600">"${wordInfo.example}"</i></p>
         `;
         
-        // Re-enable save button if not already saved
-        if (!isSaved) {
-            saveWordFromInfoBtn.onclick = () => {
-                saveWordToNotebook(cleanedWord, wordInfo.definition, wordInfo.example, wordInfo.ipa);
-                saveWordFromInfoBtn.textContent = 'Đã lưu thành công!';
-                saveWordFromInfoBtn.disabled = true;
-                notebookWords.add(cleanedWord);
-                // Highlight the word in the UI
-                document.querySelectorAll('.lookup-word').forEach(span => {
-                    if (span.textContent.trim().toLowerCase().replace(/[^a-z'-]/g, '') === cleanedWord) {
-                        span.classList.add('saved-word-highlight');
-                    }
-                });
-            };
-        }
+        saveWordFromInfoBtn.onclick = () => {
+            const selectedDeckId = deckSelectDropdown.value;
+            if (selectedDeckId) {
+                saveWordToNotebook(cleanedWord, wordInfo, selectedDeckId);
+            }
+        };
 
     } catch (error) {
         console.error("Word Lookup Error:", error);
@@ -1471,7 +1418,6 @@ async function handlePathStepCompletion(achievedScore, totalScore) {
             playAgainButton.textContent = "Tiếp tục Lộ trình";
             playAgainButton.onclick = showLearningPath;
 
-            // When passing, allow reviewing answers for quizzes, or feedback for writing
             if (step.type === 'writing') {
                 reviewAnswersButton.textContent = "Xem lại Phản hồi";
                 reviewAnswersButton.onclick = () => showView('writing-view');
@@ -1494,7 +1440,6 @@ async function handlePathStepCompletion(achievedScore, totalScore) {
         playAgainButton.textContent = "Thử lại ngay";
         playAgainButton.onclick = startPathStep;
 
-        // If failed a writing step, review the feedback. If failed a quiz, go to reinforcement.
         if (step.type === 'writing') {
             reviewAnswersButton.textContent = "Xem lại Phản hồi";
             reviewAnswersButton.onclick = () => showView('writing-view');
@@ -1761,79 +1706,279 @@ async function generateRecommendations(stats) {
     });
 }
 
-// --- Notebook Functions ---
-// UPDATED FUNCTION
-async function saveWordToNotebook(word, definition, example, ipa) {
-    if (!auth.currentUser) return;
-    const cleanedWord = word.toLowerCase();
-    if (notebookWords.has(cleanedWord)) return; // Don't save duplicates
+// ========================================================================
+// --- NOTEBOOK V4 FUNCTIONS ---
+// ========================================================================
 
-    const notebookRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
-    try {
-        await addDoc(notebookRef, {
-            word: cleanedWord, 
-            definition: definition || 'Chưa có giải thích.',
-            example: example || 'Chưa có câu ví dụ.',
-            ipa: ipa || '',
-            addedAt: serverTimestamp()
-        });
-        notebookWords.add(cleanedWord); // Update local cache
-    } catch (error) { console.error("Error saving word:", error); }
+// Get all decks for the current user
+async function getDecks() {
+    if (!auth.currentUser) return [];
+    const decksRef = collection(db, "users", auth.currentUser.uid, "notebookDecks");
+    const q = query(decksRef);
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// UPDATED FUNCTION
+// Show the main notebook view with a list of decks
 async function showNotebook() {
     if (!auth.currentUser) { showError("Bạn cần đăng nhập để xem sổ tay."); return; }
     showView('notebook-view');
-    notebookList.innerHTML = '<div class="spinner mx-auto"></div>';
+    deckList.innerHTML = '<div class="spinner mx-auto"></div>';
     try {
-        const notebookRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
-        const q = query(notebookRef);
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-            notebookList.innerHTML = '<p class="text-center text-slate-500">Sổ tay của bạn còn trống. Hãy nhấn vào các từ trong bài tập để lưu nhé!</p>';
+        const decks = await getDecks();
+        if (decks.length === 0) {
+            deckList.innerHTML = '<p class="text-center text-slate-500">Bạn chưa có bộ thẻ nào. Nhấn "Tạo bộ thẻ mới" để bắt đầu!</p>';
             return;
         }
-        notebookList.innerHTML = '';
-        querySnapshot.docs
-            .sort((a,b) => (b.data().addedAt?.seconds || 0) - (a.data().addedAt?.seconds || 0))
-            .forEach((docSnapshot) => {
-                const wordData = docSnapshot.data();
-                const wordId = docSnapshot.id;
-                const card = document.createElement('div');
-                card.className = 'bg-teal-50 p-4 rounded-lg border border-teal-200';
-                card.innerHTML = `
-                    <div class="flex justify-between items-start">
+        
+        deckList.innerHTML = '';
+        decks.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+             .forEach(deck => {
+                const deckEl = document.createElement('div');
+                deckEl.className = 'bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+                deckEl.onclick = () => showDeckDetails(deck.id, deck.name);
+                deckEl.innerHTML = `
+                    <div class="flex justify-between items-center">
                         <div>
-                            <div class="flex items-center gap-3">
-                                <h4 class="text-xl font-bold text-teal-800 capitalize">${wordData.word}</h4>
-                                <button class="speak-btn" onclick="window.playSpeech('${wordData.word}')">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-teal-600 hover:text-teal-800"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
-                                </button>
-                            </div>
-                            <p class="text-slate-500">${wordData.ipa || ''}</p>
-                            <p class="text-slate-700 mt-1">${wordData.definition}</p>
-                            <p class="text-sm text-slate-500 italic mt-2">"${wordData.example}"</p>
+                            <h3 class="font-bold text-lg text-slate-800">${deck.name}</h3>
+                            <p class="text-sm text-slate-500">${deck.wordCount || 0} từ</p>
                         </div>
-                        <button class="delete-word-btn text-red-400 hover:text-red-600 text-2xl" data-id="${wordId}" data-word="${wordData.word}" title="Xóa từ này">🗑️</button>
-                    </div>`;
-                notebookList.appendChild(card);
-            });
-        document.querySelectorAll('.delete-word-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const wordId = e.currentTarget.dataset.id;
-                const word = e.currentTarget.dataset.word;
-                showConfirmModal('Bạn có chắc muốn xóa từ này?', async () => {
-                    const wordDocRef = doc(db, "users", auth.currentUser.uid, "vocabulary", wordId);
-                    await deleteDoc(wordDocRef);
-                    notebookWords.delete(word); // Remove from local cache
-                    e.currentTarget.closest('.bg-teal-50').remove();
-                });
-            });
-        });
+                        <div class="flex items-center gap-2">
+                             <button class="delete-deck-btn text-red-400 hover:text-red-600 text-xl" data-deck-id="${deck.id}" data-deck-name="${deck.name}" title="Xóa bộ thẻ này">🗑️</button>
+                             <span class="text-slate-400">&rarr;</span>
+                        </div>
+                    </div>
+                `;
+                deckList.appendChild(deckEl);
+             });
+
     } catch (error) {
-        console.error("Error loading notebook:", error);
-        notebookList.innerHTML = '<p class="text-center text-red-500">Không thể tải sổ tay.</p>';
+        console.error("Error loading decks:", error);
+        deckList.innerHTML = '<p class="text-center text-red-500">Không thể tải các bộ thẻ.</p>';
+    }
+}
+
+// Create a new deck
+async function createNewDeck() {
+    showInputModal('Tạo bộ thẻ mới', 'Tên bộ thẻ', 'VD: IELTS Writing Task 2...', async (deckName) => {
+        if (!auth.currentUser) return;
+        const decksRef = collection(db, "users", auth.currentUser.uid, "notebookDecks");
+        try {
+            await addDoc(decksRef, {
+                name: deckName,
+                wordCount: 0,
+                createdAt: serverTimestamp()
+            });
+            await showNotebook(); // Refresh the deck list
+        } catch (error) {
+            console.error("Error creating deck:", error);
+            showError("Không thể tạo bộ thẻ mới.");
+        }
+    });
+}
+
+// Delete a deck and all words within it
+async function deleteDeck(deckId, deckName) {
+    showConfirmModal('Xóa bộ thẻ?', `Bạn có chắc muốn xóa vĩnh viễn bộ thẻ "${deckName}" và toàn bộ từ vựng bên trong? Hành động này không thể hoàn tác.`, async () => {
+        if (!auth.currentUser) return;
+        deckList.innerHTML = '<div class="spinner mx-auto"></div>';
+        try {
+            const batch = writeBatch(db);
+            
+            // 1. Delete all words associated with this deck
+            const wordsRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
+            const q = query(wordsRef, where("deckId", "==", deckId));
+            const wordsSnapshot = await getDocs(q);
+            wordsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // 2. Delete the deck itself
+            const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
+            batch.delete(deckRef);
+
+            // 3. Commit the batch
+            await batch.commit();
+            
+            // 4. Refresh UI
+            await fetchUserNotebook(); // Re-fetch all words to update highlighting
+            await showNotebook();
+
+        } catch (error) {
+            console.error("Error deleting deck:", error);
+            showError("Đã xảy ra lỗi khi xóa bộ thẻ.");
+            await showNotebook(); // Refresh list even on error
+        }
+    });
+}
+
+// Show the details of a specific deck
+async function showDeckDetails(deckId, deckName) {
+    if (!auth.currentUser) return;
+    currentDeckId = deckId;
+    showView('deck-details-view');
+    deckNameTitle.textContent = deckName;
+    deckWordList.innerHTML = '<div class="spinner mx-auto"></div>';
+    quickLookupResult.innerHTML = '';
+    quickLookupInput.value = '';
+    
+    try {
+        const wordsRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
+        const q = query(wordsRef, where("deckId", "==", deckId));
+        const querySnapshot = await getDocs(q);
+        
+        const words = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (words.length === 0) {
+            deckWordList.innerHTML = '<p class="text-center text-slate-500">Chưa có từ nào trong bộ thẻ này. Hãy dùng box "Tra cứu & Thêm" ở trên nhé!</p>';
+            return;
+        }
+
+        deckWordList.innerHTML = '';
+        words.sort((a, b) => (b.addedAt?.seconds || 0) - (a.addedAt?.seconds || 0))
+             .forEach(word => {
+                const wordEl = document.createElement('div');
+                wordEl.className = 'p-3 bg-slate-50 rounded-lg flex items-center justify-between';
+                wordEl.innerHTML = `
+                    <div class="flex items-center">
+                        <input type="checkbox" class="word-checkbox h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4" data-word-id="${word.id}">
+                        <div>
+                            <p class="font-semibold text-slate-800 capitalize">${word.word}</p>
+                            <p class="text-sm text-slate-600">${word.definition}</p>
+                        </div>
+                    </div>
+                    <button class="delete-word-btn text-red-400 hover:text-red-600 text-xl" data-word-id="${word.id}" data-deck-id="${deckId}" title="Xóa từ này">🗑️</button>
+                `;
+                deckWordList.appendChild(wordEl);
+             });
+
+    } catch (error) {
+        console.error("Error loading words in deck:", error);
+        deckWordList.innerHTML = '<p class="text-center text-red-500">Không thể tải danh sách từ.</p>';
+    }
+}
+
+// New function for quick lookup and save inside a deck
+async function handleQuickLookupAndSave() {
+    const word = quickLookupInput.value.trim().toLowerCase();
+    if (!word || !currentDeckId) return;
+
+    quickLookupResult.innerHTML = '<div class="spinner mx-auto"></div>';
+    
+    try {
+        const prompt = getWordInfoPrompt(word);
+        const result = await fastModel.generateContent(prompt);
+        const response = await result.response;
+        const wordInfo = extractAndParseJson(response.text());
+
+        if (!wordInfo || !wordInfo.definition) {
+            throw new Error("AI did not return valid information.");
+        }
+        
+        // Display result for confirmation (optional, but good UX)
+        quickLookupResult.innerHTML = `
+            <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p>Đã thêm: <b class="capitalize">${word}</b> - ${wordInfo.definition}</p>
+            </div>
+        `;
+        quickLookupInput.value = '';
+
+        // Save the word
+        await saveWordToNotebook(word, wordInfo, currentDeckId);
+        
+        // Refresh the word list in the current deck view
+        const deckDoc = await getDoc(doc(db, "users", auth.currentUser.uid, "notebookDecks", currentDeckId));
+        showDeckDetails(currentDeckId, deckDoc.data().name);
+
+    } catch (error) {
+        console.error("Quick lookup error:", error);
+        quickLookupResult.innerHTML = `<p class="text-red-500">Không thể tra cứu hoặc lưu từ này. Vui lòng thử lại.</p>`;
+    }
+}
+
+// UPDATED: saveWordToNotebook now handles deckId and wordCount
+async function saveWordToNotebook(word, wordInfo, deckId) {
+    if (!auth.currentUser || !deckId) return;
+    const cleanedWord = word.toLowerCase();
+
+    const wordQuery = query(collection(db, "users", auth.currentUser.uid, "vocabulary"), where("word", "==", cleanedWord), where("deckId", "==", deckId));
+    const existingWordSnap = await getDocs(wordQuery);
+
+    if (!existingWordSnap.empty) {
+        console.log(`Word "${cleanedWord}" already exists in this deck.`);
+        // Optionally show a message to the user
+        if(wordInfoModal.classList.contains('active')) {
+            saveWordFromInfoBtn.textContent = 'Từ này đã có trong bộ!';
+            setTimeout(() => hideModal(wordInfoModal), 2000);
+        }
+        return;
+    }
+
+    const vocabRef = collection(db, "users", auth.currentUser.uid, "vocabulary");
+    const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
+    
+    try {
+        // Use a batch to ensure atomicity
+        const batch = writeBatch(db);
+
+        // 1. Add the new word document
+        const newWordRef = doc(vocabRef); // Auto-generate ID
+        batch.set(newWordRef, {
+            word: cleanedWord, 
+            definition: wordInfo.definition || 'Chưa có giải thích.',
+            example: wordInfo.example || 'Chưa có câu ví dụ.',
+            ipa: wordInfo.ipa || '',
+            deckId: deckId,
+            addedAt: serverTimestamp()
+        });
+        
+        // 2. Increment the word count in the deck document
+        batch.update(deckRef, { wordCount: increment(1) });
+        
+        await batch.commit();
+
+        notebookWords.add(cleanedWord); // Update global highlight cache
+        
+        // Update UI in the modal if it's open
+        if(wordInfoModal.classList.contains('active')) {
+            saveWordFromInfoBtn.textContent = 'Đã lưu thành công!';
+            saveWordFromInfoBtn.disabled = true;
+            setTimeout(() => hideModal(wordInfoModal), 1500);
+        }
+
+    } catch (error) { 
+        console.error("Error saving word:", error); 
+        if(wordInfoModal.classList.contains('active')) {
+            saveWordFromInfoBtn.textContent = 'Lỗi! Thử lại';
+            saveWordFromInfoBtn.disabled = false;
+        }
+    }
+}
+
+// Delete a single word from a deck
+async function deleteWordFromDeck(wordId, deckId) {
+    if (!auth.currentUser) return;
+    try {
+        const batch = writeBatch(db);
+
+        // 1. Delete the word document
+        const wordRef = doc(db, "users", auth.currentUser.uid, "vocabulary", wordId);
+        batch.delete(wordRef);
+        
+        // 2. Decrement word count in the deck
+        const deckRef = doc(db, "users", auth.currentUser.uid, "notebookDecks", deckId);
+        batch.update(deckRef, { wordCount: increment(-1) });
+
+        await batch.commit();
+        
+        // Refresh the view
+        const deckDoc = await getDoc(deckRef);
+        await showDeckDetails(deckId, deckDoc.data().name);
+        await fetchUserNotebook(); // Update global highlighting
+
+    } catch (error) {
+        console.error("Error deleting word:", error);
+        showError("Không thể xóa từ này.");
     }
 }
 
@@ -1843,7 +1988,6 @@ function playSpeech(text, startIndex = 0) {
     isPausedByUser = false;
     const utterance = new SpeechSynthesisUtterance(text.substring(startIndex));
     const voices = synth.getVoices();
-    // Prioritize a native English speaker voice if available
     let selectedVoice = voices.find(voice => voice.name === 'Google US English' || voice.name === 'Microsoft David - English (United States)');
     if (!selectedVoice) {
         selectedVoice = voices.find(voice => voice.lang.startsWith('en-')) || voices[0];
@@ -1852,7 +1996,6 @@ function playSpeech(text, startIndex = 0) {
     utterance.rate = 0.9;
     utterance.pitch = 1;
 
-    // This part is for highlighting text in the transcript, not needed for single word pronunciation
     if (transcriptContainer.offsetParent !== null) { 
         const words = text.split(/(\s+)/);
         const wordElements = words.map(word => { const span = document.createElement('span'); span.textContent = word; return span; });
@@ -2179,7 +2322,6 @@ addSoundToListener(startQuizButton, 'click', startPractice);
 addSoundToListener(quickStartButton, 'click', quickStartPractice);
 addSoundToListener(backToSetupButton, 'click', () => showView('setup-view'));
 addSoundToListener(showHistoryButton, 'click', showHistory);
-addSoundToListener(showNotebookButton, 'click', showNotebook);
 addSoundToListener(showLibraryButton, 'click', showLibrary);
 addSoundToListener(backToSetupFromLibrary, 'click', () => showView('setup-view'));
 addSoundToListener(backToSetupFromHistory, 'click', () => showView('setup-view'));
@@ -2204,6 +2346,43 @@ addSoundToListener(continuePathButton, 'click', showLearningPath);
 addSoundToListener(backToSetupFromPath, 'click', () => showView('setup-view'));
 addSoundToListener(backToPathFromReinforcement, 'click', showLearningPath);
 addSoundToListener(retryPathStepFromReinforcement, 'click', startPathStep);
+
+// NOTEBOOK V4 Event Listeners
+addSoundToListener(showNotebookButton, 'click', showNotebook);
+addSoundToListener(createNewDeckButton, 'click', createNewDeck);
+addSoundToListener(backToDecksView, 'click', showNotebook);
+addSoundToListener(quickLookupButton, 'click', handleQuickLookupAndSave);
+quickLookupInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleQuickLookupAndSave(); });
+
+// Event Delegation for dynamically created notebook elements
+appContainer.addEventListener('click', (e) => {
+    // Start Path Step
+    if (e.target && e.target.closest('.start-step-btn')) {
+        playSound('click');
+        startPathStep();
+    }
+    // Reinforcement button in quiz feedback
+    if (e.target && e.target.closest('.reinforce-btn')) {
+        playSound('click');
+        const resultIndex = parseInt(e.target.closest('.reinforce-btn').dataset.questionIndex, 10);
+        const result = sessionResults[resultIndex];
+        requestReinforcement(result.question, result.userAnswer);
+    }
+    // Delete Deck Button
+    if (e.target && e.target.classList.contains('delete-deck-btn')) {
+        e.stopPropagation(); // Prevent triggering the deck click
+        playSound('click');
+        const { deckId, deckName } = e.target.dataset;
+        deleteDeck(deckId, deckName);
+    }
+    // Delete Word Button in Deck Details
+    if (e.target && e.target.classList.contains('delete-word-btn')) {
+        playSound('click');
+        const { wordId, deckId } = e.target.dataset;
+        deleteWordFromDeck(wordId, deckId);
+    }
+});
+
 
 quizTypeSelect.addEventListener('change', handleQuizTypeChange);
 topicSelect.addEventListener('change', () => {
@@ -2245,19 +2424,6 @@ writingInput.addEventListener('input', () => {
 document.getElementById('quiz-view').addEventListener('click', (e) => {
     if (e.target.classList.contains('lookup-word')) {
         showWordInfo(e.target.textContent);
-    }
-});
-
-appContainer.addEventListener('click', (e) => {
-    if (e.target && e.target.closest('.start-step-btn')) {
-        playSound('click');
-        startPathStep();
-    }
-    if (e.target && e.target.closest('.reinforce-btn')) {
-        playSound('click');
-        const resultIndex = parseInt(e.target.closest('.reinforce-btn').dataset.questionIndex, 10);
-        const result = sessionResults[resultIndex];
-        requestReinforcement(result.question, result.userAnswer);
     }
 });
 
