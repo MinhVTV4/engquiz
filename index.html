@@ -23,7 +23,7 @@
     <div id="appContainer" class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8 transition-all duration-500">
 
         <!-- Màn hình 0: Đăng nhập / Đăng ký -->
-        <div id="auth-view" class="view active">
+        <div id="auth-view" class="view">
             <h1 class="text-3xl font-bold text-center text-sky-600 mb-2">Chào mừng bạn!</h1>
             <p class="text-center text-slate-500 mb-8">Đăng nhập hoặc Đăng ký để lưu tiến trình học</p>
             <div class="space-y-4">
@@ -38,7 +38,7 @@
         </div>
 
         <!-- Màn hình 1: Thiết lập bài kiểm tra -->
-        <div id="setup-view" class="view">
+        <div id="setup-view" class="view active">
             <div class="flex justify-between items-start mb-6">
                  <div><h1 class="text-3xl font-bold text-sky-600">AI English Quiz</h1><p id="welcomeMessage" class="text-slate-500">Chào mừng trở lại!</p></div>
                  <div class="flex flex-col items-end space-y-2">
@@ -220,14 +220,92 @@
             <div id="historyList" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
         </div>
 
-        <!-- Màn hình Sổ tay Từ vựng -->
+        <!-- ================================================================= -->
+        <!-- SỔ TAY (NOTEBOOK) - CẤU TRÚC MỚI -->
+        <!-- ================================================================= -->
+
+        <!-- Màn hình Sổ tay Chính (Danh sách các Bộ thẻ) -->
         <div id="notebook-view" class="view">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-teal-600">Sổ tay Từ vựng</h2>
-                <button id="backToSetupFromNotebook" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+                <h2 class="text-3xl font-bold text-teal-600">Sổ tay của bạn</h2>
+                <div class="flex items-center gap-2">
+                    <button id="createNewDeckButton" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Tạo bộ thẻ mới</button>
+                    <button id="backToSetupFromNotebook" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
+                </div>
             </div>
-            <div id="notebookList" class="space-y-3"></div>
+            <!-- Danh sách các bộ thẻ sẽ được hiển thị ở đây -->
+            <div id="deckList" class="space-y-3">
+                <!-- Ví dụ một bộ thẻ -->
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">IELTS Writing Task 2</h3>
+                            <p class="text-sm text-slate-500">15 từ</p>
+                        </div>
+                        <div class="text-slate-400">
+                            <span>&rarr;</span>
+                        </div>
+                    </div>
+                </div>
+                 <!-- Hết ví dụ -->
+            </div>
         </div>
+
+        <!-- Màn hình Chi tiết Bộ thẻ -->
+        <div id="deck-details-view" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="deckNameTitle" class="text-3xl font-bold text-teal-600">Tên bộ thẻ</h2>
+                <button id="backToDecksView" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại Sổ tay</button>
+            </div>
+
+            <!-- Box Tra từ nhanh -->
+            <div class="p-4 bg-sky-50 rounded-lg border border-sky-200 mb-6">
+                <h3 class="font-semibold text-lg text-sky-800 mb-2">Thêm từ vào bộ thẻ này</h3>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="quickLookupInput" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" placeholder="Nhập từ tiếng Anh...">
+                    <button id="quickLookupButton" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg transition">Tra cứu & Thêm</button>
+                </div>
+                <!-- Kết quả tra cứu nhanh sẽ hiện ở đây -->
+                <div id="quickLookupResult" class="mt-4"></div>
+            </div>
+
+            <!-- Khu vực Quản lý -->
+            <div class="mb-4 flex flex-col md:flex-row gap-4">
+                <input type="search" id="deckSearchInput" placeholder="Tìm từ trong bộ..." class="w-full p-2 border border-slate-300 rounded-lg">
+                <!-- Thêm bộ lọc, sắp xếp nếu cần -->
+            </div>
+
+            <!-- Danh sách từ vựng trong bộ thẻ -->
+            <div id="deckWordList" class="space-y-2">
+                <!-- Ví dụ một từ trong bộ thẻ -->
+                <div class="p-3 bg-slate-50 rounded-lg flex items-center">
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4">
+                    <div>
+                        <p class="font-semibold text-slate-800">Sustainable</p>
+                        <p class="text-sm text-slate-600">bền vững</p>
+                    </div>
+                </div>
+                <!-- Hết ví dụ -->
+            </div>
+
+            <!-- Phân trang và hành động -->
+            <div class="mt-6 flex justify-between items-center">
+                <div class="flex items-center">
+                    <input type="checkbox" id="selectAllWordsCheckbox" class="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                    <label for="selectAllWordsCheckbox" class="ml-2 text-sm font-medium text-slate-700">Chọn tất cả</label>
+                </div>
+                <div id="deckPagination" class="text-sm">
+                    <!-- Nút phân trang sẽ ở đây -->
+                </div>
+            </div>
+
+            <button id="reviewSelectedWordsButton" class="mt-6 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-orange-300">Ôn tập (0 từ)</button>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- HẾT PHẦN SỔ TAY MỚI -->
+        <!-- ================================================================= -->
+
 
         <!-- Màn hình Đang tải câu hỏi -->
         <div id="loading-view" class="view text-center py-16">
@@ -355,6 +433,19 @@
             </div>
         </div>
     </div>
+    
+    <div id="inputModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="inputTitle" class="text-xl font-bold text-slate-800 mb-4">Tạo bộ thẻ mới</h3>
+            <label id="inputLabel" for="inputField" class="block text-sm font-medium mb-1 text-slate-700">Tên bộ thẻ</label>
+            <input type="text" id="inputField" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+            <p id="inputError" class="text-red-500 text-sm h-5 mt-1"></p>
+            <div class="flex justify-end space-x-3 mt-4">
+                <button id="inputCancelBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-5 rounded-lg">Hủy</button>
+                <button id="inputOkBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-5 rounded-lg">Tạo</button>
+            </div>
+        </div>
+    </div>
 
     <div id="vocabModal" class="modal-overlay">
         <div class="modal-content !p-0">
@@ -378,7 +469,7 @@
         </div>
     </div>
 
-    <!-- NEW/UPDATED: Word Info Modal -->
+    <!-- CẬP NHẬT: Word Info Modal với Dropdown chọn bộ thẻ -->
     <div id="wordInfoModal" class="modal-overlay">
         <div class="modal-content">
             <div class="flex justify-between items-center pb-4 border-b mb-4">
@@ -393,7 +484,14 @@
             <div id="wordInfoContent" class="space-y-4 min-h-[100px]">
                 <div class="spinner mx-auto"></div>
             </div>
-            <button id="saveWordFromInfoBtn" class="mt-6 w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-teal-300 disabled:cursor-not-allowed">Lưu vào sổ tay</button>
+            <!-- Dropdown chọn bộ thẻ -->
+            <div id="deckSelectionContainer" class="mt-4">
+                <label for="deckSelectDropdown" class="block text-sm font-medium mb-1 text-slate-700">Lưu vào bộ thẻ:</label>
+                <select id="deckSelectDropdown" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition bg-white">
+                    <!-- Các bộ thẻ sẽ được load vào đây -->
+                </select>
+            </div>
+            <button id="saveWordFromInfoBtn" class="mt-4 w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition disabled:bg-teal-300 disabled:cursor-not-allowed">Lưu vào sổ tay</button>
         </div>
     </div>
 
