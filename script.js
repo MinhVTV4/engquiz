@@ -260,7 +260,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Other auth functions remain the same...
 async function checkUserLearningPath(userId) {
     const pathRef = doc(db, "learningPaths", userId);
     const docSnap = await getDoc(pathRef);
@@ -2366,15 +2365,43 @@ async function startDiagnosticConversation() {
     playSpeech(initialPrompt);
 }
 
+// SỬA LỖI (V7): Implement a full handler for diagnostic responses
 async function handleDiagnosticResponse(text, type = 'text') {
     if (!text.trim()) return;
     addMessageToLog(conversationLog, 'user', text);
     diagnosticConversationState.history.push({ role: 'user', text: text, inputType: type });
     conversationTextInput.value = '';
     conversationInputArea.classList.add('hidden');
-    
-    // Logic for AI response... (omitted for brevity, same as before)
+
+    const thinkingDiv = document.createElement('div');
+    thinkingDiv.innerHTML = `<div class="font-bold text-sm mb-1 text-slate-600">AI</div><div class="p-3 rounded-lg bg-slate-200 text-slate-800"><div class="spinner h-5 w-5 border-2 border-left-color-slate-400"></div></div>`;
+    conversationLog.appendChild(thinkingDiv);
+    conversationLog.scrollTop = conversationLog.scrollHeight;
+
+    try {
+        const historyText = diagnosticConversationState.history.map(h => `${h.role}: ${h.text}`).join('\n');
+        // This prompt is designed for assessment, slightly different from practice
+        const prompt = `This is a diagnostic conversation. The user just said: "${text}". The history is:\n${historyText}\n\nAsk a follow-up question to gauge their English level. If the conversation has had more than 6 turns, say "Thank you! I have enough information now. I will now analyze your results."`;
+        
+        const result = await fastModel.generateContent(prompt);
+        const aiResponse = (await result.response).text();
+
+        conversationLog.removeChild(thinkingDiv);
+        addMessageToLog(conversationLog, 'ai', aiResponse);
+        diagnosticConversationState.history.push({ role: 'ai', text: aiResponse });
+        playSpeech(aiResponse);
+
+        if (aiResponse.includes("analyze your results")) {
+            endDiagnosticConversationButton.textContent = "Xem kết quả";
+            endDiagnosticConversationButton.onclick = () => showPlacementResult();
+        } else {
+            conversationInputArea.classList.remove('hidden');
+        }
+    } catch (error) {
+        showError("Lỗi trong quá trình hội thoại chẩn đoán.");
+    }
 }
+
 
 // V7: Conversation Practice Functions
 async function startConversationPractice() {
@@ -2424,7 +2451,7 @@ async function handleConversationPracticeResponse(text, type = 'text') {
         conversationPracticeLog.removeChild(thinkingDiv);
         addMessageToLog(conversationPracticeLog, 'ai', aiResponse);
         conversationPracticeState.history.push({ role: 'ai', text: aiResponse });
-        playSpeech(aiResponse);
+        playSpeech(aiResponse); // SỬA LỖI: Đảm bảo AI đọc to câu trả lời
         conversationPracticeInputArea.classList.remove('hidden');
     } catch (error) {
         showError("Lỗi trong quá trình hội thoại.");
@@ -2472,7 +2499,7 @@ function displayConversationFeedback(data) {
         <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
             <h4 class="text-lg font-bold text-amber-800 mb-3">Gợi ý cải thiện 💡</h4>
             <div class="space-y-3">
-                ${data.areasForImprovement.map(item => `
+                ${(data.areasForImprovement || []).map(item => `
                     <div class="p-3 rounded-md bg-white border">
                         <p class="font-semibold text-slate-700"><span class="text-sm font-bold py-0.5 px-2 rounded-full bg-amber-200 text-amber-800">${item.type}</span></p>
                         <p class="text-red-600 mt-2">Bạn đã nói: <span class="font-mono bg-red-100 p-1 rounded text-sm">"${item.original}"</span></p>
@@ -2650,9 +2677,16 @@ document.getElementById('quiz-view').addEventListener('click', (e) => {
     }
 });
 
+// SỬA LỖI (V7): Kết nối đúng hàm cho Trò chuyện Chẩn đoán
 micButton.addEventListener('click', () => { if (diagnosticConversationState.recognition) { playSound('click'); diagnosticConversationState.recognition.start(); micButton.classList.add('mic-recording', 'bg-red-400'); micButton.disabled = true; } });
 sendTextButton.addEventListener('click', () => { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); });
 conversationTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); } });
+addSoundToListener(endDiagnosticConversationButton, 'click', () => {
+    if (diagnosticConversationState.recognition) diagnosticConversationState.recognition.stop();
+    if (synth.speaking) synth.cancel();
+    showView('setup-view');
+});
+
 
 // Initial setup
 handleQuizTypeChange();
