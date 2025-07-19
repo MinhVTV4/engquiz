@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -248,20 +248,24 @@ async function fetchUserNotebook() {
     notebookWords = new Set(querySnapshot.docs.map(doc => doc.data().word.toLowerCase()));
 }
 
+// SỬA LỖI: Logic xác thực ổn định hơn
 onAuthStateChanged(auth, async (user) => {
     if (user) { 
+        const currentView = document.querySelector('.view.active');
+        const isAuthScreen = currentView && currentView.id === 'auth-view';
+
         welcomeMessage.textContent = `Chào mừng, ${user.email}!`; 
         await updateUserStreak(user.uid); 
         await checkUserLearningPath(user.uid);
         await fetchUserNotebook();
         
-        if (!isInitialAuthComplete) {
+        // Chỉ tự động chuyển màn hình nếu đang ở màn hình đăng nhập
+        if (isAuthScreen) {
             showView('setup-view'); 
-            isInitialAuthComplete = true;
         }
     } else { 
         showView('auth-view'); 
-        isInitialAuthComplete = false;
+        // Reset state khi đăng xuất
         userHistoryCache = []; 
         currentUserPath = null;
         notebookWords.clear();
