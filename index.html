@@ -86,7 +86,6 @@
                             <option value="grammar">Ngữ pháp (Grammar)</option>
                             <option value="listening">Nghe hiểu (Listening)</option>
                             <option value="writing">Luyện Viết (Writing)</option>
-                            <!-- MỚI: Thêm tùy chọn Hội thoại -->
                             <option value="conversation">Hội thoại thực (Speaking)</option>
                         </select>
                     </div>
@@ -167,7 +166,11 @@
         <div id="diagnostic-conversation-view" class="view">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-3xl font-bold text-purple-600">Trò chuyện Chẩn đoán</h2>
-                <button id="endDiagnosticConversationButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc</button>
+                <!-- CẬP NHẬT: Thêm nút bật/tắt âm thanh -->
+                <div class="flex items-center gap-2">
+                    <button id="toggleDiagnosticSpeechBtn" class="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition" title="Bật/Tắt đọc to"></button>
+                    <button id="endDiagnosticConversationButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc</button>
+                </div>
             </div>
             <div class="min-h-[400px] flex flex-col">
                 <div id="conversationLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto"></div>
@@ -181,14 +184,18 @@
             </div>
         </div>
 
-        <!-- MỚI: Màn hình Hội thoại Thực hành -->
+        <!-- Màn hình Hội thoại Thực hành -->
         <div id="conversation-practice-view" class="view">
             <div class="flex justify-between items-center mb-4">
                 <div>
                     <h2 class="text-3xl font-bold text-purple-600">Hội thoại thực</h2>
                     <p id="conversationPracticeTopic" class="text-slate-500"></p>
                 </div>
-                <button id="endConversationPracticeButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc & Nhận xét</button>
+                <!-- CẬP NHẬT: Thêm nút bật/tắt âm thanh -->
+                <div class="flex items-center gap-2">
+                    <button id="togglePracticeSpeechBtn" class="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition" title="Bật/Tắt đọc to"></button>
+                    <button id="endConversationPracticeButton" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Kết thúc & Nhận xét</button>
+                </div>
             </div>
             <div class="min-h-[400px] flex flex-col">
                 <div id="conversationPracticeLog" class="flex-grow space-y-4 p-4 bg-slate-50 rounded-lg border mb-4 overflow-y-auto"></div>
@@ -202,15 +209,13 @@
             </div>
         </div>
 
-        <!-- MỚI: Màn hình Phản hồi Hội thoại -->
+        <!-- Màn hình Phản hồi Hội thoại -->
         <div id="conversation-feedback-view" class="view">
              <div class="flex justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-purple-600">Nhận xét từ AI</h2>
                 <button id="backToSetupFromConvFeedback" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Quay lại</button>
             </div>
-            <div id="conversationFeedbackContainer" class="space-y-4">
-                <!-- Phản hồi sẽ được render ở đây -->
-            </div>
+            <div id="conversationFeedbackContainer" class="space-y-4"></div>
         </div>
 
         <!-- Màn hình Lộ trình học tập -->
