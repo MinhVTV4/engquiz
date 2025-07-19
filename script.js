@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -2360,10 +2360,11 @@ function addMessageToLog(logEl, sender, text) {
 
 async function startDiagnosticConversation() {
     currentQuizType = 'diagnostic';
-    diagnosticConversationState = { history: [], recognition: null };
+    diagnosticConversationState = { history: [], recognition: null, isFinished: false };
     showView('diagnostic-conversation-view');
     conversationLog.innerHTML = '';
     conversationInputArea.classList.remove('hidden');
+    endDiagnosticConversationButton.textContent = "Kết thúc";
     
     diagnosticConversationState.recognition = initSpeechRecognition(micButton, handleDiagnosticResponse);
     
@@ -2374,7 +2375,7 @@ async function startDiagnosticConversation() {
 }
 
 async function handleDiagnosticResponse(text, type = 'text') {
-    if (!text.trim()) return;
+    if (!text.trim() || diagnosticConversationState.isFinished) return;
     addMessageToLog(conversationLog, 'user', text);
     diagnosticConversationState.history.push({ role: 'user', text: text, inputType: type });
     conversationTextInput.value = '';
@@ -2398,8 +2399,8 @@ async function handleDiagnosticResponse(text, type = 'text') {
         if (isSpeechEnabled) playSpeech(aiResponse);
 
         if (aiResponse.includes("analyze your results")) {
+            diagnosticConversationState.isFinished = true;
             endDiagnosticConversationButton.textContent = "Xem kết quả";
-            endDiagnosticConversationButton.onclick = () => showPlacementResult();
         } else {
             conversationInputArea.classList.remove('hidden');
         }
@@ -2689,15 +2690,24 @@ document.getElementById('quiz-view').addEventListener('click', (e) => {
     }
 });
 
-// SỬA LỖI (V8): Kết nối đúng hàm cho Trò chuyện Chẩn đoán
+// SỬA LỖI (V8): Kết nối đúng hàm cho các nút bấm hội thoại
 micButton.addEventListener('click', () => { if (diagnosticConversationState.recognition) { playSound('click'); diagnosticConversationState.recognition.start(); micButton.classList.add('mic-recording', 'bg-red-400'); micButton.disabled = true; } });
 sendTextButton.addEventListener('click', () => { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); });
 conversationTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); } });
 addSoundToListener(endDiagnosticConversationButton, 'click', () => {
-    if (diagnosticConversationState.recognition) diagnosticConversationState.recognition.stop();
-    if (synth.speaking) synth.cancel();
-    showView('setup-view');
+    if (diagnosticConversationState.isFinished) {
+        showPlacementResult();
+    } else {
+        if (diagnosticConversationState.recognition) diagnosticConversationState.recognition.stop();
+        if (synth.speaking) synth.cancel();
+        showView('setup-view');
+    }
 });
+
+micPracticeButton.addEventListener('click', () => { if (conversationPracticeState.recognition) { playSound('click'); conversationPracticeState.recognition.start(); micPracticeButton.classList.add('mic-recording', 'bg-red-400'); micPracticeButton.disabled = true; } });
+sendPracticeTextButton.addEventListener('click', () => { playSound('click'); handleConversationPracticeResponse(conversationPracticeTextInput.value); });
+conversationPracticeTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleConversationPracticeResponse(conversationPracticeTextInput.value); } });
+addSoundToListener(endConversationPracticeButton, 'click', endConversationPractice);
 
 
 // Initial setup
