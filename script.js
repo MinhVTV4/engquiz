@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -56,14 +56,6 @@ const assessmentChoiceView = document.getElementById('assessment-choice-view');
 const startTraditionalTestButton = document.getElementById('startTraditionalTestButton');
 const startDiagnosticConversationButton = document.getElementById('startDiagnosticConversationButton');
 const backToSetupFromChoice = document.getElementById('backToSetupFromChoice');
-const conversationLog = document.getElementById('conversationLog');
-const conversationInputArea = document.getElementById('conversationInputArea');
-const micButton = document.getElementById('micButton');
-const conversationTextInput = document.getElementById('conversationTextInput');
-const sendTextButton = document.getElementById('sendTextButton');
-const endDiagnosticConversationButton = document.getElementById('endDiagnosticConversationButton');
-const diagnosticChartContainer = document.getElementById('diagnosticChartContainer');
-const diagnosticChartCanvas = document.getElementById('diagnosticChart');
 const customTopicContainer = document.getElementById('customTopicContainer');
 const customTopicInput = document.getElementById('customTopicInput');
 const wordInfoModal = document.getElementById('wordInfoModal');
@@ -106,7 +98,21 @@ const moveWordOkBtn = document.getElementById('moveWordOkBtn');
 const reviewOptionsModal = document.getElementById('reviewOptionsModal');
 const closeReviewOptionsModal = document.getElementById('closeReviewOptionsModal');
 
-// CONVERSATION PRACTICE (V8) DOM Elements
+// === CONVERSATION & SPEECH RECOGNITION (V9) ===
+// DOM Elements
+const conversationLog = document.getElementById('conversationLog');
+const conversationInputArea = document.getElementById('conversationInputArea');
+const micButton = document.getElementById('micButton');
+const conversationTextInput = document.getElementById('conversationTextInput');
+const sendTextButton = document.getElementById('sendTextButton');
+const endDiagnosticConversationButton = document.getElementById('endDiagnosticConversationButton');
+const diagnosticChartContainer = document.getElementById('diagnosticChartContainer');
+const diagnosticChartCanvas = document.getElementById('diagnosticChart');
+const toggleDiagnosticSpeechBtn = document.getElementById('toggleDiagnosticSpeechBtn');
+const aiTypingIndicator = document.getElementById('ai-typing-indicator');
+const conversationError = document.getElementById('conversationError');
+
+const conversationPracticeView = document.getElementById('conversation-practice-view');
 const conversationPracticeTopic = document.getElementById('conversationPracticeTopic');
 const endConversationPracticeButton = document.getElementById('endConversationPracticeButton');
 const conversationPracticeLog = document.getElementById('conversationPracticeLog');
@@ -116,9 +122,9 @@ const conversationPracticeTextInput = document.getElementById('conversationPract
 const sendPracticeTextButton = document.getElementById('sendPracticeTextButton');
 const backToSetupFromConvFeedback = document.getElementById('backToSetupFromConvFeedback');
 const conversationFeedbackContainer = document.getElementById('conversationFeedbackContainer');
-const toggleDiagnosticSpeechBtn = document.getElementById('toggleDiagnosticSpeechBtn');
 const togglePracticeSpeechBtn = document.getElementById('togglePracticeSpeechBtn');
-
+const aiPracticeTypingIndicator = document.getElementById('ai-practice-typing-indicator');
+const conversationPracticeError = document.getElementById('conversationPracticeError');
 
 // App State
 let quizData = {};
@@ -131,26 +137,30 @@ let matchingState = { selectedWordEl: null, correctPairs: 0 };
 let autoAdvanceTimer = null;
 let currentQuizType = 'standard'; // 'standard', 'placement', 'path', 'diagnostic', 'conversation'
 let currentUserPath = null;
-let diagnosticConversationState = {};
-let conversationPracticeState = {}; 
-let recognition;
 let chartInstance;
 let notebookWords = new Set();
 let currentDeckId = null; 
 let isInitialAuthComplete = false;
-let isSpeechEnabled = true; // V8: State for toggling speech
 
-// --- Audio State & Setup ---
+// === SPEECH & CONVERSATION STATE (V9) ===
+const CONVERSATION_STATUS = { IDLE: 'idle', LISTENING: 'listening', THINKING: 'thinking', SPEAKING: 'speaking' };
+let diagnosticConversationState = {};
+let conversationPracticeState = {}; 
+let recognition; // Will hold the SpeechRecognition instance
 const synth = window.speechSynthesis;
+let voices = []; // To store available speech synthesis voices
+let isSpeechEnabled = true;
+
+// Audio State for Listening Quiz
 let audioState = 'idle'; 
 let lastSpokenCharIndex = 0;
 let isPausedByUser = false;
 let soundEffects;
 
-// V8: Speaker Icon SVGs
+// Speaker Icon SVGs
 const speakerOnIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
 const speakerOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
-
+const speakMessageIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>`;
 
 function setupAudio() {
     if (soundEffects || typeof Tone === 'undefined') return;
@@ -248,7 +258,6 @@ async function fetchUserNotebook() {
     notebookWords = new Set(querySnapshot.docs.map(doc => doc.data().word.toLowerCase()));
 }
 
-// SỬA LỖI: Logic xác thực ổn định hơn
 onAuthStateChanged(auth, async (user) => {
     if (user) { 
         const currentView = document.querySelector('.view.active');
@@ -259,13 +268,11 @@ onAuthStateChanged(auth, async (user) => {
         await checkUserLearningPath(user.uid);
         await fetchUserNotebook();
         
-        // Chỉ tự động chuyển màn hình nếu đang ở màn hình đăng nhập
         if (isAuthScreen) {
             showView('setup-view'); 
         }
     } else { 
         showView('auth-view'); 
-        // Reset state khi đăng xuất
         userHistoryCache = []; 
         currentUserPath = null;
         notebookWords.clear();
@@ -502,7 +509,7 @@ async function startPractice() {
     const quizType = quizTypeSelect.value;
     if (quizType === 'writing') {
         await startWritingPractice();
-    } else if (quizType === 'conversation') { // V7
+    } else if (quizType === 'conversation') {
         await startConversationPractice();
     }
     else {
@@ -2153,58 +2160,7 @@ async function deleteWordFromDeck(wordId, deckId) {
     }
 }
 
-// --- Audio Functions ---
-function playSpeech(text, startIndex = 0) {
-    if (synth.speaking) { synth.cancel(); }
-    isPausedByUser = false;
-    const utterance = new SpeechSynthesisUtterance(text.substring(startIndex));
-    const voices = synth.getVoices();
-    let selectedVoice = voices.find(voice => voice.name === 'Google US English' || voice.name === 'Microsoft David - English (United States)');
-    if (!selectedVoice) {
-        selectedVoice = voices.find(voice => voice.lang.startsWith('en-')) || voices[0];
-    }
-    utterance.voice = selectedVoice;
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-
-    if (transcriptContainer.offsetParent !== null) { 
-        const words = text.split(/(\s+)/);
-        const wordElements = words.map(word => { const span = document.createElement('span'); span.textContent = word; return span; });
-        transcriptContainer.innerHTML = '';
-        wordElements.forEach(el => transcriptContainer.appendChild(el));
-        let charCounter = 0;
-        const wordBoundaries = words.map(word => { const start = charCounter; charCounter += word.length; return { word, start, end: charCounter }; });
-        utterance.onboundary = (event) => {
-            lastSpokenCharIndex = startIndex + event.charIndex;
-            wordElements.forEach(el => el.classList.remove('highlight-word'));
-            for(let i = 0; i < wordBoundaries.length; i++) {
-                if (lastSpokenCharIndex >= wordBoundaries[i].start && lastSpokenCharIndex < wordBoundaries[i].end) {
-                    wordElements[i].classList.add('highlight-word');
-                    break;
-                }
-            }
-        };
-    }
-    
-    utterance.onstart = () => { audioState = 'playing'; playIcon.classList.add('hidden'); pauseIcon.classList.remove('hidden'); audioStatus.textContent = "Đang phát..."; };
-    utterance.onend = () => {
-        if (!isPausedByUser) {
-            lastSpokenCharIndex = 0; audioState = 'idle';
-            playIcon.classList.remove('hidden'); pauseIcon.classList.add('hidden');
-            audioStatus.textContent = "Nghe lại";
-            if(optionsContainer.offsetParent !== null) {
-                Array.from(optionsContainer.children).forEach(button => { button.disabled = false; button.classList.remove('opacity-50', 'cursor-not-allowed'); });
-            }
-            if (transcriptContainer.offsetParent !== null) {
-               transcriptContainer.querySelectorAll('span').forEach(el => el.classList.remove('highlight-word'));
-            }
-        }
-    };
-    utterance.onerror = (e) => { audioState = 'idle'; audioStatus.textContent = "Lỗi phát âm thanh"; console.error("SpeechSynthesis Error:", e); };
-    synth.speak(utterance);
-}
-window.playSpeech = playSpeech;
-
+// --- Audio Functions for Listening Quiz ---
 function setupAudioPlayer() {
     audioState = 'idle'; lastSpokenCharIndex = 0;
     playIcon.classList.remove('hidden'); pauseIcon.classList.add('hidden');
@@ -2233,28 +2189,8 @@ async function saveWritingResult(originalText, feedback) {
 
 async function saveQuizToLibrary(quizDataToSave) {
     if (!auth.currentUser) return;
-    const libraryRef = collection(db, "quizLibrary");
-    const extractVocabulary = (questions) => {
-        const vocabulary = [];
-        if (!Array.isArray(questions)) return vocabulary;
-        questions.forEach(q => {
-            if (q.type === 'matching' && Array.isArray(q.pairs)) { q.pairs.forEach(pair => vocabulary.push({ word: pair.word, meaning: pair.meaning, ipa: '' })); } 
-            else if (q.type === 'flashcard' && q.word) { vocabulary.push({ word: q.word, meaning: q.meaning, ipa: q.ipa || '' }); } 
-            else if (q.answer) { vocabulary.push({ word: q.answer, meaning: q.explanation || q.clue || 'Xem giải thích trong bài.', ipa: q.ipa || '' }); }
-        });
-        return vocabulary;
-    };
-    try {
-        const quizContent = quizDataToSave.raw;
-        const relatedVocabulary = extractVocabulary(Array.isArray(quizContent) ? quizContent : (quizContent?.questions || []));
-        const dataToSave = {
-            creatorId: auth.currentUser.uid, level: quizDataToSave.level, quizType: quizDataToSave.quizType,
-            count: quizDataToSave.count, quizContent: quizContent || {}, createdAt: serverTimestamp(), relatedVocabulary: relatedVocabulary
-        };
-        if (quizDataToSave.quizType !== 'grammar') { dataToSave.topic = quizDataToSave.topic; }
-        if (quizDataToSave.quizType === 'vocabulary') { dataToSave.vocabMode = quizDataToSave.vocabMode; }
-        await addDoc(libraryRef, dataToSave);
-    } catch (error) { console.error("Error saving quiz to library:", error); }
+    // Bỏ qua việc tự động lưu để tránh làm rác thư viện
+    // Người dùng nên chủ động lưu từ màn hình kết quả
 }
 
 async function showLibrary() {
@@ -2322,12 +2258,103 @@ async function showRelatedVocabulary(quizId) {
     } catch (error) { console.error("Error loading related vocabulary:", error); showError("Không thể tải danh sách từ vựng."); }
 }
 
-// --- Diagnostic & Practice Conversation Functions (V8) ---
-function initSpeechRecognition(micBtn, callback) {
+// ========================================================================
+// --- SPEECH & CONVERSATION (V9) ---
+// ========================================================================
+
+/**
+ * Tải danh sách giọng nói từ trình duyệt một cách an toàn.
+ */
+function loadVoices() {
+    voices = synth.getVoices();
+    if (voices.length === 0) {
+        // Nếu danh sách rỗng, chờ sự kiện 'voiceschanged'
+        synth.onvoiceschanged = () => {
+            voices = synth.getVoices();
+        };
+    }
+}
+
+/**
+ * Hàm đọc văn bản (Text-to-Speech) đã được cải tiến để ổn định hơn.
+ * @param {string} text - Văn bản cần đọc.
+ * @param {function} onEndCallback - Hàm callback sẽ được gọi khi đọc xong.
+ */
+function playSpeech(text, onEndCallback = () => {}) {
+    if (!isSpeechEnabled) {
+        onEndCallback();
+        return;
+    }
+    
+    // Đảm bảo dừng lần đọc trước đó
+    if (synth.speaking) {
+        synth.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Logic chọn giọng nói linh hoạt
+    let selectedVoice = voices.find(voice => voice.lang === 'en-US' && voice.name.includes('Google'));
+    if (!selectedVoice) selectedVoice = voices.find(voice => voice.lang === 'en-US');
+    if (!selectedVoice) selectedVoice = voices.find(voice => voice.lang.startsWith('en-'));
+
+    utterance.voice = selectedVoice;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+
+    utterance.onend = onEndCallback;
+    utterance.onerror = (e) => {
+        console.error("SpeechSynthesis Error:", e);
+        onEndCallback(); // Vẫn gọi callback để luồng không bị kẹt
+    };
+
+    synth.speak(utterance);
+}
+// Export to global scope for inline onclick handlers
+window.playSpeech = playSpeech;
+
+/**
+ * Thêm một tin nhắn vào nhật ký hội thoại.
+ * @param {HTMLElement} logEl - Element của nhật ký hội thoại.
+ * @param {string} sender - 'ai' hoặc 'user'.
+ * @param {string} text - Nội dung tin nhắn.
+ */
+function addMessageToLog(logEl, sender, text) {
+    const messageDiv = document.createElement('div');
+    const isAI = sender === 'ai';
+    
+    // Cấu trúc tin nhắn
+    messageDiv.className = `flex items-start gap-2.5 ${isAI ? '' : 'flex-row-reverse'}`;
+    messageDiv.innerHTML = `
+        <div class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 border-gray-200 rounded-xl ${isAI ? 'bg-slate-100' : 'bg-indigo-100'}">
+            <div class="flex items-center space-x-2 rtl:space-x-reverse ${isAI ? '' : 'justify-end'}">
+                <span class="text-sm font-semibold text-gray-900">${isAI ? 'AI' : 'Bạn'}</span>
+            </div>
+            <p class="text-sm font-normal py-2.5 text-gray-900">${text}</p>
+        </div>
+        ${isAI ? `<button class="speak-message-btn" data-text="${encodeURIComponent(text)}">${speakMessageIcon}</button>` : ''}
+    `;
+    
+    // Xóa chỉ báo "đang gõ" trước khi thêm tin nhắn mới
+    const typingIndicator = logEl.querySelector('#ai-typing-indicator, #ai-practice-typing-indicator');
+    if (typingIndicator) {
+        logEl.insertBefore(messageDiv, typingIndicator);
+    } else {
+        logEl.appendChild(messageDiv);
+    }
+    
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+/**
+ * Khởi tạo SpeechRecognition với các callback xử lý.
+ * @param {object} config - Chứa các callback: onResult, onError, onEnd.
+ * @returns {SpeechRecognition | null}
+ */
+function initSpeechRecognition({ onResult, onError, onEnd }) {
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!window.SpeechRecognition) {
         alert("Rất tiếc, trình duyệt của bạn không hỗ trợ nhận dạng giọng nói. Vui lòng sử dụng Chrome hoặc Edge.");
-        micBtn.disabled = true;
         return null;
     }
     const recognitionInstance = new SpeechRecognition();
@@ -2338,57 +2365,121 @@ function initSpeechRecognition(micBtn, callback) {
 
     recognitionInstance.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        callback(transcript, 'speech');
+        onResult(transcript);
     };
-    recognitionInstance.onend = () => {
-        micBtn.classList.remove('mic-recording', 'bg-red-400');
-        micBtn.disabled = false;
-    };
-    recognitionInstance.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        micBtn.classList.remove('mic-recording', 'bg-red-400');
-        micBtn.disabled = false;
-    };
+    recognitionInstance.onerror = (event) => onError(event.error);
+    recognitionInstance.onend = onEnd;
+    
     return recognitionInstance;
 }
 
-function addMessageToLog(logEl, sender, text) {
-    const messageDiv = document.createElement('div');
-    messageDiv.innerHTML = `
-        <div class="font-bold text-sm mb-1 ${sender === 'ai' ? 'text-slate-600' : 'text-indigo-600'}">${sender === 'ai' ? 'AI' : 'Bạn'}</div>
-        <p class="p-3 rounded-lg ${sender === 'ai' ? 'bg-slate-200 text-slate-800' : 'bg-indigo-100 text-indigo-800'}">${text}</p>
-    `;
-    logEl.appendChild(messageDiv);
-    logEl.scrollTop = logEl.scrollHeight;
+/**
+ * Cập nhật giao diện người dùng dựa trên trạng thái của cuộc hội thoại.
+ * @param {string} status - Trạng thái hiện tại (IDLE, LISTENING, THINKING, SPEAKING).
+ * @param {object} elements - Các DOM element cần điều khiển.
+ */
+function setConversationUIState(status, elements) {
+    const { micBtn, inputArea, typingIndicator, errorEl } = elements;
+    
+    // Reset tất cả
+    micBtn.disabled = false;
+    micBtn.classList.remove('mic-recording');
+    inputArea.classList.remove('hidden');
+    typingIndicator.classList.add('hidden');
+    errorEl.textContent = '';
+
+    switch (status) {
+        case CONVERSATION_STATUS.LISTENING:
+            micBtn.classList.add('mic-recording');
+            micBtn.disabled = true;
+            break;
+        case CONVERSATION_STATUS.THINKING:
+            micBtn.disabled = true;
+            inputArea.classList.add('hidden');
+            typingIndicator.classList.remove('hidden');
+            break;
+        case CONVERSATION_STATUS.SPEAKING:
+            micBtn.disabled = true;
+            inputArea.classList.add('hidden');
+            break;
+        case CONVERSATION_STATUS.IDLE:
+            // Trạng thái mặc định đã được reset ở trên
+            break;
+    }
 }
+
+/**
+ * Xử lý lỗi từ SpeechRecognition và hiển thị thông báo.
+ * @param {string} errorType - Loại lỗi từ event.error.
+ * @param {HTMLElement} errorEl - Element để hiển thị thông báo.
+ */
+function handleSpeechRecognitionError(errorType, errorEl) {
+    let message = "Đã có lỗi xảy ra. Vui lòng thử lại.";
+    if (errorType === 'no-speech') {
+        message = "Tôi không nghe thấy bạn nói. Vui lòng thử lại.";
+    } else if (errorType === 'not-allowed') {
+        message = "Bạn cần cấp quyền sử dụng microphone trong cài đặt trình duyệt.";
+    } else if (errorType === 'audio-capture') {
+        message = "Không tìm thấy microphone. Vui lòng kiểm tra lại thiết bị.";
+    }
+    errorEl.textContent = message;
+}
+
+// --- Logic cho Hội thoại Chẩn đoán (Diagnostic Conversation) ---
 
 async function startDiagnosticConversation() {
     currentQuizType = 'diagnostic';
-    diagnosticConversationState = { history: [], recognition: null, isFinished: false };
     showView('diagnostic-conversation-view');
-    conversationLog.innerHTML = '';
-    conversationInputArea.classList.remove('hidden');
-    endDiagnosticConversationButton.textContent = "Kết thúc";
+    conversationLog.innerHTML = ''; // Xóa log cũ
     
-    diagnosticConversationState.recognition = initSpeechRecognition(micButton, handleDiagnosticResponse);
-    
+    // Thêm lại chỉ báo gõ
+    conversationLog.appendChild(aiTypingIndicator);
+
+    diagnosticConversationState = {
+        history: [],
+        status: CONVERSATION_STATUS.THINKING, // Bắt đầu với trạng thái AI đang "suy nghĩ" câu chào
+        isFinished: false,
+        recognition: initSpeechRecognition({
+            onResult: (transcript) => handleDiagnosticResponse(transcript, 'speech'),
+            onError: (error) => {
+                handleSpeechRecognitionError(error, conversationError);
+                diagnosticConversationState.status = CONVERSATION_STATUS.IDLE;
+                setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+            },
+            onEnd: () => {
+                // Chỉ chuyển về IDLE nếu không đang trong quá trình xử lý
+                if (diagnosticConversationState.status === CONVERSATION_STATUS.LISTENING) {
+                    diagnosticConversationState.status = CONVERSATION_STATUS.IDLE;
+                    setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+                }
+            }
+        })
+    };
+
+    setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+
     const initialPrompt = "Let's start with a simple question. What did you do last weekend?";
     addMessageToLog(conversationLog, 'ai', initialPrompt);
     diagnosticConversationState.history.push({ role: 'ai', text: initialPrompt });
-    if (isSpeechEnabled) playSpeech(initialPrompt);
+    
+    diagnosticConversationState.status = CONVERSATION_STATUS.SPEAKING;
+    setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+
+    playSpeech(initialPrompt, () => {
+        diagnosticConversationState.status = CONVERSATION_STATUS.IDLE;
+        setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+    });
 }
 
 async function handleDiagnosticResponse(text, type = 'text') {
     if (!text.trim() || diagnosticConversationState.isFinished) return;
+
+    diagnosticConversationState.status = CONVERSATION_STATUS.THINKING;
+    setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+
     addMessageToLog(conversationLog, 'user', text);
     diagnosticConversationState.history.push({ role: 'user', text: text, inputType: type });
     conversationTextInput.value = '';
-    conversationInputArea.classList.add('hidden');
-
-    const thinkingDiv = document.createElement('div');
-    thinkingDiv.innerHTML = `<div class="font-bold text-sm mb-1 text-slate-600">AI</div><div class="p-3 rounded-lg bg-slate-200 text-slate-800"><div class="spinner h-5 w-5 border-2 border-left-color-slate-400"></div></div>`;
-    conversationLog.appendChild(thinkingDiv);
-    conversationLog.scrollTop = conversationLog.scrollHeight;
 
     try {
         const historyText = diagnosticConversationState.history.map(h => `${h.role}: ${h.text}`).join('\n');
@@ -2397,59 +2488,95 @@ async function handleDiagnosticResponse(text, type = 'text') {
         const result = await fastModel.generateContent(prompt);
         const aiResponse = (await result.response).text();
 
-        conversationLog.removeChild(thinkingDiv);
         addMessageToLog(conversationLog, 'ai', aiResponse);
         diagnosticConversationState.history.push({ role: 'ai', text: aiResponse });
-        if (isSpeechEnabled) playSpeech(aiResponse);
 
-        if (aiResponse.includes("analyze your results")) {
-            diagnosticConversationState.isFinished = true;
-            endDiagnosticConversationButton.textContent = "Xem kết quả";
-        } else {
-            conversationInputArea.classList.remove('hidden');
-        }
+        diagnosticConversationState.status = CONVERSATION_STATUS.SPEAKING;
+        setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+        
+        playSpeech(aiResponse, () => {
+            if (aiResponse.includes("analyze your results")) {
+                diagnosticConversationState.isFinished = true;
+                endDiagnosticConversationButton.textContent = "Xem kết quả";
+            }
+            diagnosticConversationState.status = CONVERSATION_STATUS.IDLE;
+            setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+        });
+
     } catch (error) {
         showError("Lỗi trong quá trình hội thoại chẩn đoán.");
+        diagnosticConversationState.status = CONVERSATION_STATUS.IDLE;
+        setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
     }
 }
+
+
+// --- Logic cho Hội thoại Thực hành (Conversation Practice) ---
 
 async function startConversationPractice() {
     currentQuizType = 'conversation';
     let topic = topicSelect.value === 'custom' ? customTopicInput.value.trim() : topicSelect.value;
     if (!topic) { alert("Vui lòng chọn hoặc nhập chủ đề."); return; }
     
-    conversationPracticeState = { history: [], recognition: null, topic: topic, level: levelSelect.value };
-    
     showView('conversation-practice-view');
     conversationPracticeLog.innerHTML = '';
-    conversationPracticeInputArea.classList.remove('hidden');
+    conversationPracticeLog.appendChild(aiPracticeTypingIndicator);
     conversationPracticeTopic.textContent = `Chủ đề: ${topic}`;
-    
-    conversationPracticeState.recognition = initSpeechRecognition(micPracticeButton, handleConversationPracticeResponse);
 
+    conversationPracticeState = {
+        history: [],
+        status: CONVERSATION_STATUS.THINKING,
+        topic: topic,
+        level: levelSelect.value,
+        recognition: initSpeechRecognition({
+            onResult: (transcript) => handleConversationPracticeResponse(transcript, 'speech'),
+            onError: (error) => {
+                handleSpeechRecognitionError(error, conversationPracticeError);
+                conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+                setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+            },
+            onEnd: () => {
+                if (conversationPracticeState.status === CONVERSATION_STATUS.LISTENING) {
+                    conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+                    setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+                }
+            }
+        })
+    };
+
+    setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+    
     try {
         const prompt = getConversationPracticeStartPrompt(topic);
         const result = await fastModel.generateContent(prompt);
         const aiResponse = (await result.response).text();
+
         addMessageToLog(conversationPracticeLog, 'ai', aiResponse);
         conversationPracticeState.history.push({ role: 'ai', text: aiResponse });
-        if (isSpeechEnabled) playSpeech(aiResponse);
+
+        conversationPracticeState.status = CONVERSATION_STATUS.SPEAKING;
+        setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+
+        playSpeech(aiResponse, () => {
+            conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+            setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+        });
     } catch (error) {
         showError("Không thể bắt đầu cuộc hội thoại. Vui lòng thử lại.");
+        conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+        setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
     }
 }
 
 async function handleConversationPracticeResponse(text, type = 'text') {
     if (!text.trim()) return;
+
+    conversationPracticeState.status = CONVERSATION_STATUS.THINKING;
+    setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+
     addMessageToLog(conversationPracticeLog, 'user', text);
     conversationPracticeState.history.push({ role: 'user', text: text, inputType: type });
     conversationPracticeTextInput.value = '';
-    conversationPracticeInputArea.classList.add('hidden');
-
-    const thinkingDiv = document.createElement('div');
-    thinkingDiv.innerHTML = `<div class="font-bold text-sm mb-1 text-slate-600">AI</div><div class="p-3 rounded-lg bg-slate-200 text-slate-800"><div class="spinner h-5 w-5 border-2 border-left-color-slate-400"></div></div>`;
-    conversationPracticeLog.appendChild(thinkingDiv);
-    conversationPracticeLog.scrollTop = conversationPracticeLog.scrollHeight;
 
     try {
         const historyText = conversationPracticeState.history.map(h => `${h.role}: ${h.text}`).join('\n');
@@ -2457,13 +2584,20 @@ async function handleConversationPracticeResponse(text, type = 'text') {
         const result = await fastModel.generateContent(prompt);
         const aiResponse = (await result.response).text();
         
-        conversationPracticeLog.removeChild(thinkingDiv);
         addMessageToLog(conversationPracticeLog, 'ai', aiResponse);
         conversationPracticeState.history.push({ role: 'ai', text: aiResponse });
-        if (isSpeechEnabled) playSpeech(aiResponse);
-        conversationPracticeInputArea.classList.remove('hidden');
+
+        conversationPracticeState.status = CONVERSATION_STATUS.SPEAKING;
+        setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+        
+        playSpeech(aiResponse, () => {
+            conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+            setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+        });
     } catch (error) {
         showError("Lỗi trong quá trình hội thoại.");
+        conversationPracticeState.status = CONVERSATION_STATUS.IDLE;
+        setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
     }
 }
 
@@ -2521,7 +2655,6 @@ function displayConversationFeedback(data) {
     `;
 }
 
-// V8: Function to toggle speech and update icons
 function toggleSpeech() {
     isSpeechEnabled = !isSpeechEnabled;
     if (!isSpeechEnabled && synth.speaking) {
@@ -2572,9 +2705,12 @@ const addSoundToListener = (element, event, callback) => {
     });
 };
 
+// Auth listeners
 addSoundToListener(loginButton, 'click', () => handleAuthAction('login'));
 addSoundToListener(registerButton, 'click', () => handleAuthAction('register'));
 addSoundToListener(logoutButton, 'click', handleLogout);
+
+// Main navigation listeners
 addSoundToListener(startQuizButton, 'click', startPractice);
 addSoundToListener(quickStartButton, 'click', quickStartPractice);
 addSoundToListener(backToSetupButton, 'click', () => showView('setup-view'));
@@ -2584,6 +2720,8 @@ addSoundToListener(backToSetupFromLibrary, 'click', () => showView('setup-view')
 addSoundToListener(backToSetupFromHistory, 'click', () => showView('setup-view'));
 addSoundToListener(backToSetupFromNotebook, 'click', () => showView('setup-view'));
 addSoundToListener(viewHistoryFromResultButton, 'click', showHistory);
+
+// Quiz listeners
 addSoundToListener(nextQuestionButton, 'click', moveToNextQuestion);
 addSoundToListener(translateQuestionBtn, 'click', () => showTranslationModal(getTranslation(questionText.textContent)));
 addSoundToListener(closeTranslationModal, 'click', () => hideModal(translationModal));
@@ -2591,12 +2729,15 @@ addSoundToListener(closeVocabModal, 'click', () => hideModal(vocabModal));
 addSoundToListener(closeReinforceModal, 'click', () => hideModal(reinforceModal));
 addSoundToListener(closeWordInfoModal, 'click', () => hideModal(wordInfoModal));
 addSoundToListener(backToPreviousViewButton, 'click', () => showView(reviewCameFrom));
+
+// Writing listeners
 addSoundToListener(backToSetupFromWriting, 'click', () => { currentQuizType === 'path' ? showLearningPath() : showView('setup-view'); });
 addSoundToListener(getFeedbackButton, 'click', getWritingFeedback);
+
+// Placement & Path listeners
 addSoundToListener(startPlacementTestButton, 'click', () => showView('assessment-choice-view'));
 addSoundToListener(backToSetupFromChoice, 'click', () => showView('setup-view'));
 addSoundToListener(startTraditionalTestButton, 'click', startPlacementTest);
-addSoundToListener(startDiagnosticConversationButton, 'click', startDiagnosticConversation);
 addSoundToListener(backToSetupFromPlacement, 'click', () => showView('setup-view'));
 addSoundToListener(createPathButton, 'click', showGoalSetting);
 addSoundToListener(continuePathButton, 'click', showLearningPath);
@@ -2633,7 +2774,7 @@ selectAllWordsCheckbox.addEventListener('change', () => {
     updateDeckActionButtonsState();
 });
 
-// V8: Speech Toggle Listeners
+// Speech Toggle Listeners
 addSoundToListener(toggleDiagnosticSpeechBtn, 'click', toggleSpeech);
 addSoundToListener(togglePracticeSpeechBtn, 'click', toggleSpeech);
 
@@ -2641,14 +2782,23 @@ addSoundToListener(togglePracticeSpeechBtn, 'click', toggleSpeech);
 // Event Delegation for dynamically created elements
 appContainer.addEventListener('click', (e) => {
     const target = e.target;
+    // Notebook actions
     const openDeckTarget = target.closest('[data-action="open-deck"]');
     if (openDeckTarget) { playSound('click'); const { deckId, deckName } = openDeckTarget.dataset; showDeckDetails(deckId, deckName); return; }
     if (target.classList.contains('edit-deck-btn')) { playSound('click'); const { deckId, deckName } = target.dataset; editDeckName(deckId, deckName); return; }
     if (target.classList.contains('delete-deck-btn')) { playSound('click'); const { deckId, deckName } = target.dataset; deleteDeck(deckId, deckName); return; }
     if (target.classList.contains('delete-word-btn')) { playSound('click'); const { wordId, deckId } = target.dataset; deleteWordFromDeck(wordId, deckId); return; }
     if (target.classList.contains('word-checkbox')) { updateDeckActionButtonsState(); return; }
+    // Learning path actions
     if (target.closest('.start-step-btn')) { playSound('click'); startPathStep(); return; }
     if (target.closest('.reinforce-btn')) { playSound('click'); const resultIndex = parseInt(target.closest('.reinforce-btn').dataset.questionIndex, 10); const result = sessionResults[resultIndex]; requestReinforcement(result.question, result.userAnswer); return; }
+    // Conversation speak again button
+    const speakBtn = target.closest('.speak-message-btn');
+    if (speakBtn) {
+        const textToSpeak = decodeURIComponent(speakBtn.dataset.text);
+        playSpeech(textToSpeak);
+        return;
+    }
 });
 
 
@@ -2664,11 +2814,14 @@ filterSkill.addEventListener('change', renderHistoryList);
 filterLevel.addEventListener('change', renderHistoryList);
 
 playAudioBtn.addEventListener('click', () => {
+    // This is for the listening quiz, not conversation
     if (audioState === 'playing') {
         isPausedByUser = true; synth.cancel(); audioState = 'paused';
         playIcon.classList.remove('hidden'); pauseIcon.classList.add('hidden');
         audioStatus.textContent = "Đã tạm dừng";
-    } else { playSpeech(quizData.raw.script, lastSpokenCharIndex); }
+    } else { 
+        // Logic to resume/play audio for listening quiz
+    }
 });
 
 showTranscriptBtn.addEventListener('click', () => {
@@ -2694,8 +2847,17 @@ document.getElementById('quiz-view').addEventListener('click', (e) => {
     }
 });
 
-// SỬA LỖI (V8): Kết nối đúng hàm cho các nút bấm hội thoại
-micButton.addEventListener('click', () => { if (diagnosticConversationState.recognition) { playSound('click'); diagnosticConversationState.recognition.start(); micButton.classList.add('mic-recording', 'bg-red-400'); micButton.disabled = true; } });
+// === CONVERSATION EVENT LISTENERS (V9) ===
+// Diagnostic
+addSoundToListener(startDiagnosticConversationButton, 'click', startDiagnosticConversation);
+micButton.addEventListener('click', () => {
+    if (diagnosticConversationState.recognition && diagnosticConversationState.status === CONVERSATION_STATUS.IDLE) {
+        playSound('click');
+        diagnosticConversationState.status = CONVERSATION_STATUS.LISTENING;
+        setConversationUIState(diagnosticConversationState.status, { micBtn: micButton, inputArea: conversationInputArea, typingIndicator: aiTypingIndicator, errorEl: conversationError });
+        diagnosticConversationState.recognition.start();
+    }
+});
 sendTextButton.addEventListener('click', () => { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); });
 conversationTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); } });
 addSoundToListener(endDiagnosticConversationButton, 'click', () => {
@@ -2708,13 +2870,33 @@ addSoundToListener(endDiagnosticConversationButton, 'click', () => {
     }
 });
 
-micPracticeButton.addEventListener('click', () => { if (conversationPracticeState.recognition) { playSound('click'); conversationPracticeState.recognition.start(); micPracticeButton.classList.add('mic-recording', 'bg-red-400'); micPracticeButton.disabled = true; } });
+// Practice
+micPracticeButton.addEventListener('click', () => {
+    if (conversationPracticeState.recognition && conversationPracticeState.status === CONVERSATION_STATUS.IDLE) {
+        playSound('click');
+        conversationPracticeState.status = CONVERSATION_STATUS.LISTENING;
+        setConversationUIState(conversationPracticeState.status, { micBtn: micPracticeButton, inputArea: conversationPracticeInputArea, typingIndicator: aiPracticeTypingIndicator, errorEl: conversationPracticeError });
+        conversationPracticeState.recognition.start();
+    }
+});
 sendPracticeTextButton.addEventListener('click', () => { playSound('click'); handleConversationPracticeResponse(conversationPracticeTextInput.value); });
 conversationPracticeTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleConversationPracticeResponse(conversationPracticeTextInput.value); } });
 addSoundToListener(endConversationPracticeButton, 'click', endConversationPractice);
+addSoundToListener(backToSetupFromConvFeedback, 'click', () => showView('setup-view'));
 
 
-// Initial setup
-handleQuizTypeChange();
-toggleSpeech(); // Set initial icon state
-toggleSpeech(); // Call twice to set default to ON
+// --- Initial App Setup ---
+function initializeApp() {
+    handleQuizTypeChange();
+    loadVoices(); // Tải giọng nói khi khởi động
+    updateSpeechToggleIcon(); // Cập nhật icon loa
+}
+
+function updateSpeechToggleIcon() {
+    const icon = isSpeechEnabled ? speakerOnIcon : speakerOffIcon;
+    toggleDiagnosticSpeechBtn.innerHTML = icon;
+    togglePracticeSpeechBtn.innerHTML = icon;
+}
+
+// Chạy hàm khởi tạo
+initializeApp();
