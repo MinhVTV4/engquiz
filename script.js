@@ -25,8 +25,8 @@ try {
     db = getFirestore(app);
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     
-    model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
-    fastModel = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+    model = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
+    fastModel = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
 
 } catch(e) { 
     showError(`Lỗi khởi tạo: ${e.message}. Vui lòng kiểm tra cấu hình Firebase.`); 
@@ -106,7 +106,7 @@ const moveWordOkBtn = document.getElementById('moveWordOkBtn');
 const reviewOptionsModal = document.getElementById('reviewOptionsModal');
 const closeReviewOptionsModal = document.getElementById('closeReviewOptionsModal');
 
-// CONVERSATION PRACTICE (V7) DOM Elements
+// CONVERSATION PRACTICE (V8) DOM Elements
 const conversationPracticeTopic = document.getElementById('conversationPracticeTopic');
 const endConversationPracticeButton = document.getElementById('endConversationPracticeButton');
 const conversationPracticeLog = document.getElementById('conversationPracticeLog');
@@ -116,6 +116,8 @@ const conversationPracticeTextInput = document.getElementById('conversationPract
 const sendPracticeTextButton = document.getElementById('sendPracticeTextButton');
 const backToSetupFromConvFeedback = document.getElementById('backToSetupFromConvFeedback');
 const conversationFeedbackContainer = document.getElementById('conversationFeedbackContainer');
+const toggleDiagnosticSpeechBtn = document.getElementById('toggleDiagnosticSpeechBtn');
+const togglePracticeSpeechBtn = document.getElementById('togglePracticeSpeechBtn');
 
 
 // App State
@@ -130,12 +132,13 @@ let autoAdvanceTimer = null;
 let currentQuizType = 'standard'; // 'standard', 'placement', 'path', 'diagnostic', 'conversation'
 let currentUserPath = null;
 let diagnosticConversationState = {};
-let conversationPracticeState = {}; // V7
+let conversationPracticeState = {}; 
 let recognition;
 let chartInstance;
 let notebookWords = new Set();
 let currentDeckId = null; 
 let isInitialAuthComplete = false;
+let isSpeechEnabled = true; // V8: State for toggling speech
 
 // --- Audio State & Setup ---
 const synth = window.speechSynthesis;
@@ -143,6 +146,11 @@ let audioState = 'idle';
 let lastSpokenCharIndex = 0;
 let isPausedByUser = false;
 let soundEffects;
+
+// V8: Speaker Icon SVGs
+const speakerOnIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+const speakerOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+
 
 function setupAudio() {
     if (soundEffects || typeof Tone === 'undefined') return;
@@ -2310,7 +2318,7 @@ async function showRelatedVocabulary(quizId) {
     } catch (error) { console.error("Error loading related vocabulary:", error); showError("Không thể tải danh sách từ vựng."); }
 }
 
-// --- Diagnostic & Practice Conversation Functions (V7) ---
+// --- Diagnostic & Practice Conversation Functions (V8) ---
 function initSpeechRecognition(micBtn, callback) {
     window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!window.SpeechRecognition) {
@@ -2362,10 +2370,9 @@ async function startDiagnosticConversation() {
     const initialPrompt = "Let's start with a simple question. What did you do last weekend?";
     addMessageToLog(conversationLog, 'ai', initialPrompt);
     diagnosticConversationState.history.push({ role: 'ai', text: initialPrompt });
-    playSpeech(initialPrompt);
+    if (isSpeechEnabled) playSpeech(initialPrompt);
 }
 
-// SỬA LỖI (V7): Implement a full handler for diagnostic responses
 async function handleDiagnosticResponse(text, type = 'text') {
     if (!text.trim()) return;
     addMessageToLog(conversationLog, 'user', text);
@@ -2380,7 +2387,6 @@ async function handleDiagnosticResponse(text, type = 'text') {
 
     try {
         const historyText = diagnosticConversationState.history.map(h => `${h.role}: ${h.text}`).join('\n');
-        // This prompt is designed for assessment, slightly different from practice
         const prompt = `This is a diagnostic conversation. The user just said: "${text}". The history is:\n${historyText}\n\nAsk a follow-up question to gauge their English level. If the conversation has had more than 6 turns, say "Thank you! I have enough information now. I will now analyze your results."`;
         
         const result = await fastModel.generateContent(prompt);
@@ -2389,7 +2395,7 @@ async function handleDiagnosticResponse(text, type = 'text') {
         conversationLog.removeChild(thinkingDiv);
         addMessageToLog(conversationLog, 'ai', aiResponse);
         diagnosticConversationState.history.push({ role: 'ai', text: aiResponse });
-        playSpeech(aiResponse);
+        if (isSpeechEnabled) playSpeech(aiResponse);
 
         if (aiResponse.includes("analyze your results")) {
             endDiagnosticConversationButton.textContent = "Xem kết quả";
@@ -2402,8 +2408,6 @@ async function handleDiagnosticResponse(text, type = 'text') {
     }
 }
 
-
-// V7: Conversation Practice Functions
 async function startConversationPractice() {
     currentQuizType = 'conversation';
     let topic = topicSelect.value === 'custom' ? customTopicInput.value.trim() : topicSelect.value;
@@ -2424,7 +2428,7 @@ async function startConversationPractice() {
         const aiResponse = (await result.response).text();
         addMessageToLog(conversationPracticeLog, 'ai', aiResponse);
         conversationPracticeState.history.push({ role: 'ai', text: aiResponse });
-        playSpeech(aiResponse);
+        if (isSpeechEnabled) playSpeech(aiResponse);
     } catch (error) {
         showError("Không thể bắt đầu cuộc hội thoại. Vui lòng thử lại.");
     }
@@ -2451,7 +2455,7 @@ async function handleConversationPracticeResponse(text, type = 'text') {
         conversationPracticeLog.removeChild(thinkingDiv);
         addMessageToLog(conversationPracticeLog, 'ai', aiResponse);
         conversationPracticeState.history.push({ role: 'ai', text: aiResponse });
-        playSpeech(aiResponse); // SỬA LỖI: Đảm bảo AI đọc to câu trả lời
+        if (isSpeechEnabled) playSpeech(aiResponse);
         conversationPracticeInputArea.classList.remove('hidden');
     } catch (error) {
         showError("Lỗi trong quá trình hội thoại.");
@@ -2510,6 +2514,17 @@ function displayConversationFeedback(data) {
             </div>
         </div>
     `;
+}
+
+// V8: Function to toggle speech and update icons
+function toggleSpeech() {
+    isSpeechEnabled = !isSpeechEnabled;
+    if (!isSpeechEnabled && synth.speaking) {
+        synth.cancel();
+    }
+    const icon = isSpeechEnabled ? speakerOnIcon : speakerOffIcon;
+    toggleDiagnosticSpeechBtn.innerHTML = icon;
+    togglePracticeSpeechBtn.innerHTML = icon;
 }
 
 
@@ -2613,12 +2628,9 @@ selectAllWordsCheckbox.addEventListener('change', () => {
     updateDeckActionButtonsState();
 });
 
-// V7: Conversation Practice Listeners
-addSoundToListener(endConversationPracticeButton, 'click', endConversationPractice);
-addSoundToListener(sendPracticeTextButton, 'click', () => handleConversationPracticeResponse(conversationPracticeTextInput.value));
-conversationPracticeTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleConversationPracticeResponse(conversationPracticeTextInput.value); } });
-micPracticeButton.addEventListener('click', () => { if (conversationPracticeState.recognition) { playSound('click'); conversationPracticeState.recognition.start(); micPracticeButton.classList.add('mic-recording', 'bg-red-400'); micPracticeButton.disabled = true; } });
-addSoundToListener(backToSetupFromConvFeedback, 'click', () => showView('setup-view'));
+// V8: Speech Toggle Listeners
+addSoundToListener(toggleDiagnosticSpeechBtn, 'click', toggleSpeech);
+addSoundToListener(togglePracticeSpeechBtn, 'click', toggleSpeech);
 
 
 // Event Delegation for dynamically created elements
@@ -2677,7 +2689,7 @@ document.getElementById('quiz-view').addEventListener('click', (e) => {
     }
 });
 
-// SỬA LỖI (V7): Kết nối đúng hàm cho Trò chuyện Chẩn đoán
+// SỬA LỖI (V8): Kết nối đúng hàm cho Trò chuyện Chẩn đoán
 micButton.addEventListener('click', () => { if (diagnosticConversationState.recognition) { playSound('click'); diagnosticConversationState.recognition.start(); micButton.classList.add('mic-recording', 'bg-red-400'); micButton.disabled = true; } });
 sendTextButton.addEventListener('click', () => { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); });
 conversationTextInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { playSound('click'); handleDiagnosticResponse(conversationTextInput.value); } });
@@ -2690,3 +2702,5 @@ addSoundToListener(endDiagnosticConversationButton, 'click', () => {
 
 // Initial setup
 handleQuizTypeChange();
+toggleSpeech(); // Set initial icon state
+toggleSpeech(); // Call twice to set default to ON
